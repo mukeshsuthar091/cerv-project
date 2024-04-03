@@ -1,6 +1,9 @@
 import bcrypt from "bcryptjs";
-// import mysql from "mysql2";
+import jwt from "jsonwebtoken";
+
+
 import db from "./../db/conn.js";
+
 
 export const generateOTP = async (req, res, next) => {
   const otp = 1234;
@@ -28,58 +31,63 @@ export const verifyOTP = async (req, res, next) => {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    await db.query("SELECT * FROM users WHERE email = ?", email)
-      .then((result) => {
+    await db.query("SELECT * FROM users WHERE email = ? AND role = ? ", [email, role])
+      .then(([user, fields]) => {
         // result = data, metadata
-        console.log(result[0]);
-        if (result[0].length) {
-          res.status(422).json({
+        console.log(user);
+
+        if (user.length ) {
+          return res.status(409).json({
             success: false,
-            message: "User is already exist.",
+            message: "A user with the specified email already exists.",
           });
-        } else {
-          if (otp === 1234) {
-            db.query(
-              `INSERT INTO users(name, email, password, country_code, phone, role) VALUES ('${name}', '${email}', '${hash}', '${country_code}', '${phone}', '${role}')`
-            )
-              .then((result) => {
-                res.status(200).json({
-                  success: true,
-                  userData: { email: email },
-                  message: "OTP Verified successfully",
-                });
-              })
-              .catch((err) => {
-                console.error("Error inserting user:", err);
-                res.status(500).json({
-                  success: false,
-                  message: "Error inserting user.",
-                });
+        }
+
+        if (otp === 1234) {
+          db.query(
+            `INSERT INTO users(name, email, password, country_code, phone, role) VALUES ('${name}', '${email}', '${hash}', '${country_code}', '${phone}', '${role}')`
+          )
+            .then((result) => {
+              res.status(200).json({
+                success: true,
+                userData: { email: email, role: role },
+                message: "OTP Verified successfully",
               });
-          } else {
-            // If OTP verification fails, return an error response
-            res.status(400).json({
-              success: false,
-              message: "Invalid OTP.",
+            })
+            .catch((err) => {
+              console.error("Error inserting user:", err);
+              res.status(500).json({
+                success: false,
+                message: "Error inserting user.",
+              });
             });
-          }
+        } else {
+          // If OTP verification fails, return an error response
+          res.status(400).json({
+            success: false,
+            message: "Invalid OTP.",
+          });
         }
       })
-      .catch((err) => {
-        console.error("Error checking user:", err);
-        res.status(500).json({
-          success: false,
-          message: "Error checking user.",
-        });
-      });
+      // .catch((err) => {
+      //   console.error("Error checking user:", err);
+      //   res.status(500).json({
+      //     success: false,
+      //     message: "Error checking user.",
+      //   });
+      // });
   } catch (err) {
-    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to created. Try again",
+    });
   }
 };
 
 export const register = async (req, res, next) => {
   // const userDetails = req.body;
   const email = req.body.email;
+  const role = req.body.role;
   const business_license_num = req.body.businessLicenseNum;
   const business_license_image = req.body.businessLicenseImage;
   const address = req.body.address;
@@ -93,17 +101,23 @@ export const register = async (req, res, next) => {
   const driver_license_image = req.body.driverLicenseImage;
 
   console.log(email);
+  let userId;
+
   try {
-    
-    await db.execute("SELECT * FROM users WHERE email = ?", [email]).then(
-      ([row, field]) => {
-        if (row.length) {
-          console.log(row[0].id)
+    await db
+      .execute("SELECT * FROM users WHERE email = ? AND role = ? ", [email, role])
+      .then(([user, field]) => {
+        userId = user[0].id;
+        return db.execute("SELECT * FROM userDetails WHERE user_id = ? ", [userId]);
+      })
+      .then(([userDetails, fields])=>{
+
+        if (!userDetails.length) {
           const sql =
             "INSERT INTO userDetails(user_id, business_license_number, business_license_image, address, bio, order_type, distance_fee_waived, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
           const values = [
-            row[0].id,
+            user[0].id,
             business_license_num,
             business_license_image,
             address,
@@ -117,7 +131,7 @@ export const register = async (req, res, next) => {
             driver_license_image,
           ];
 
-          console.log(values)
+          console.log(values);
 
           db.execute(sql, values)
             .then((result) => {
@@ -133,38 +147,66 @@ export const register = async (req, res, next) => {
                 message: "registration failed",
               });
             });
-        }
-        else{
+        } else {
           res.status(500).json({
             success: false,
-            message: "user not exist.",
+            message: "user is already register.",
           });
         }
-      }
-    );
+      });
   } catch (err) {
     console.log(err);
   }
 };
 
-export const login = async (req, res, next)=>{
-  const email = req.body.email;
-  const password = req.body.password;
-  const role = req.body.role;
+export const login = async (req, res, next) => {
+  const userEmail = req.body.email;
+  const userPassword = req.body.password;
+  const userRole = req.body.role;
 
-  
   try {
-    const [user, fields] = await db.execute("SELECT * FROM users WHERE email = ?", [email])
+    const [user, fields] = await db.execute("SELECT * FROM users WHERE email = ? AND role = ? ", [userEmail, userRole]);
     // console.log(user.length);
-
-    if (user.length) {
+    if (!user.length) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
+
     
+    // if user is exist then check the password or compare the password
+    const checkCorrectPassword = await bcrypt.compare(userPassword, user[0].password);
+
+    if(!checkCorrectPassword){
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect email or password.",
+      })
+    }
+
+    const {password, role, ...rest} = user[0];
+
+    // console.log(email, password, role, id);
+
+    const token = jwt.sign(
+      {id: user[0].id, role: user[0].role},
+      'gahg48589a45ajfjAUFAHHFIhufuu',
+      { expiresIn: '15d'});
+
+    res.cookie("accessToken", token, {
+      httpOnly: true,
+      expires: token.expiresIn,
+    })
+    .status(200)
+    .json({
+      token, data: {...rest}, role
+    });
+
   } catch (err) {
-    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to login",
+    });
   }
-}
+};
