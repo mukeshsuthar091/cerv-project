@@ -1,16 +1,26 @@
 import express from "express";
 
-import { generateOTP, login, register, verifyOTP } from "../controller/authController.js";
+import { changePassword, forgotPassword, login, register, resend_OTP, resetPassword, send_OTP, verify_OTP } from "../controller/authController.js";
+import { verifyToken } from "../utils/verifyToken.js";
+import upload from "../middleware/multer.js";
 
 const router = express.Router();
 
-router.get("/otp", generateOTP);
+router.post("/send-otp", send_OTP);
 
-router.post("/otp", verifyOTP);
+router.post("/resend-otp", resend_OTP)
 
-router.post("/register", register);
+router.post("/verify-otp", verify_OTP);
+
+router.post("/register",upload, register);
 
 router.post("/login", login);
+
+router.put("/change-password", verifyToken, changePassword);
+
+router.post("/forgot-password", forgotPassword)
+
+router.post("/reset-password/:id/:token", resetPassword)
 
 
 export default router;
