@@ -2,7 +2,7 @@ import express from "express";
 
 import { changePassword, forgotPassword, login, register, resend_OTP, resetPassword, send_OTP, verify_OTP } from "../controller/authController.js";
 import { verifyToken } from "../utils/verifyToken.js";
-import upload from "../middleware/multer.js";
+import upload from "../uploads/multer.js";
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router.post("/resend-otp", resend_OTP)
 
 router.post("/verify-otp", verify_OTP);
 
-router.post("/register",upload, register);
+router.post("/register",upload.array("image"), register);
 
 router.post("/login", login);
 

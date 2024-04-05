@@ -1,3 +1,5 @@
+import fs from "fs";
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
@@ -6,6 +8,8 @@ import pkg from "otpless-node-js-auth-sdk";
 const { sendOTP, resendOTP, verifyOTP } = pkg;
 
 import db from "../db/database.js";
+// import upload from "../uploads/multer.js";
+import uploads from "../uploads/cloudinary.js";
 
 const transporter = nodemailer.createTransport({
   host: "smtp.ethereal.email",
@@ -136,7 +140,6 @@ export const verify_OTP = async (req, res, next) => {
         message: "Invalid OTP.",
       });
     }
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -150,7 +153,7 @@ export const register = async (req, res, next) => {
   const email = req.body.email;
   const role = req.body.role;
   const business_license_num = req.body.businessLicenseNum;
-  const business_license_image = req.body.businessLicenseImage;
+  // const business_license_image = req.body.businessLicenseImage;
   const address = req.body.address;
   const bio = req.body.bio;
   const order_type = req.body.orderType;
@@ -159,9 +162,38 @@ export const register = async (req, res, next) => {
   const food_category = req.body.foodCategory;
   const driver_name = req.body.driverName;
   const driver_license_number = req.body.driverLicenseNumber;
-  const driver_license_image = req.body.driverLicenseImage;
+  // const driver_license_image = req.body.driverLicenseImage;
+  // const business_license_image = await uploads(req.file.path, 'businessLicenseImage');
+  // const driver_license_image = await uploads(req.file.path, 'driverLicenseImage');
 
-  console.log(email);
+  console.log(req.files);
+  // console.log(email);
+
+  if (req.method === "POST") {
+    const urls = [];
+    const files = req.files;
+
+    for (const file of files) {
+      const { path } = file;
+      console.log(path);
+      const newPath = await uploads(path);
+
+      urls.push({
+        secure_url: newPath.secure_url,
+        public_id: newPath.public_id,
+      });
+    }
+  }
+  //   res.status(200).json({
+  //     message: "Images Uploaded Successfully.",
+  //     data: urls,
+  //   });
+  // } else {
+  //   res.status(405).json({
+  //     err: "Images not uploaded successfully.",
+  //   });
+  // }
+
   let userId;
 
   try {
