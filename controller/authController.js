@@ -149,9 +149,8 @@ export const verify_OTP = async (req, res, next) => {
 };
 
 export const register = async (req, res, next) => {
-  // const userDetails = req.body;
   const email = req.body.email;
-  const role = req.body.role;
+  const role = Number(req.body.role);
   const business_license_num = req.body.businessLicenseNum;
   // const business_license_image = req.body.businessLicenseImage;
   const address = req.body.address;
@@ -163,8 +162,6 @@ export const register = async (req, res, next) => {
   const driver_name = req.body.driverName;
   const driver_license_number = req.body.driverLicenseNumber;
   // const driver_license_image = req.body.driverLicenseImage;
-  // const business_license_image = await uploads(req.file.path, 'businessLicenseImage');
-  // const driver_license_image = await uploads(req.file.path, 'driverLicenseImage');
 
   console.log(req.files);
   // console.log(email);
@@ -184,15 +181,7 @@ export const register = async (req, res, next) => {
       });
     }
   }
-  //   res.status(200).json({
-  //     message: "Images Uploaded Successfully.",
-  //     data: urls,
-  //   });
-  // } else {
-  //   res.status(405).json({
-  //     err: "Images not uploaded successfully.",
-  //   });
-  // }
+  // console.log(role, email)
 
   let userId;
 
@@ -203,6 +192,7 @@ export const register = async (req, res, next) => {
         role,
       ])
       .then(([user, field]) => {
+        console.log(user);
         userId = user[0].id;
         return db.execute("SELECT * FROM userDetails WHERE user_id = ? ", [
           userId,
@@ -214,9 +204,9 @@ export const register = async (req, res, next) => {
             "INSERT INTO userDetails(user_id, business_license_number, business_license_image, address, bio, order_type, distance_fee_waived, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
           const values = [
-            user[0].id,
+            userId,
             business_license_num,
-            business_license_image,
+            null,
             address,
             bio,
             order_type,
@@ -225,7 +215,7 @@ export const register = async (req, res, next) => {
             food_category,
             driver_name,
             driver_license_number,
-            driver_license_image,
+            null,
           ];
 
           console.log(values);
@@ -321,6 +311,7 @@ export const changePassword = async (req, res, next) => {
   const oldPassword = req.body.oldPassword;
   const newPassword = req.body.newPassword;
 
+  console.log(user);
   try {
     const [row, fields] = await db.execute(
       "SELECT * FROM users WHERE id = ? AND role = ? ",
@@ -334,14 +325,14 @@ export const changePassword = async (req, res, next) => {
       });
     }
 
-    const isEqual = bcrypt.compare(oldPassword, row[0].password);
-
-    if (!isEqual) {
-      return res.status(401).json({
-        success: false,
-        message: "Wrong Password",
-      });
-    }
+    bcrypt.compare(oldPassword, row[0].password).then((isEqual) => {
+      if (!isEqual) {
+        return res.status(401).json({
+          success: false,
+          message: "Wrong Password",
+        });
+      }
+    });
 
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(newPassword, salt);
