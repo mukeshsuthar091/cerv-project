@@ -12,7 +12,7 @@ router.post("/resend-otp", resend_OTP)
 
 router.post("/verify-otp", verify_OTP);
 
-router.post("/register",upload.array("image"), register);
+router.post("/register",upload.fields([{ name: 'businessLicenseImage', maxCount: 1 }, { name: 'driverLicenseImage', maxCount: 1 }]), register);
 
 router.post("/login", login);
 
