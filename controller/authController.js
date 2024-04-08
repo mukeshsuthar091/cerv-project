@@ -55,7 +55,7 @@ export const send_OTP = async (req, res, next) => {
     console.log(response);
 
     res.status(200).json({
-      otp: response.orderId,
+      orderId: response.orderId,
       message: "OTP send successfully",
     });
   } catch (err) {
@@ -277,7 +277,7 @@ export const login = async (req, res, next) => {
   const userEmail = req.body.email;
   const userPassword = req.body.password;
   try {
-    // await userLoginValidation.validateAsync(req.body);
+    await userLoginValidation.validateAsync(req.body);
 
     const [user, fields] = await db.execute(
       "SELECT * FROM users WHERE email = ?",
@@ -328,11 +328,11 @@ export const login = async (req, res, next) => {
         role,
       });
   } catch (err) {
-    // if (err instanceof ValidationError) {
-    //   return res.status(400).json({
-    //     message: err.message,
-    //   });
-    // }
+    if (err instanceof ValidationError) {
+      return res.status(400).json({
+        message: err.message,
+      });
+    }
 
     res.status(500).json({
       success: false,
@@ -348,9 +348,9 @@ export const changePassword = async (req, res, next) => {
   const oldPassword = req.body.oldPassword;
   const newPassword = req.body.newPassword;
 
-  console.log(user);
+  // console.log(user);
   try {
-    // await userChangePasswordValidation.validateAsync(req.body);
+    await userChangePasswordValidation.validateAsync(req.body);
 
     const [row, fields] = await db.execute(
       "SELECT * FROM users WHERE id = ? AND role = ? ",
@@ -364,14 +364,14 @@ export const changePassword = async (req, res, next) => {
       });
     }
 
-    bcrypt.compare(oldPassword, row[0].password).then((isEqual) => {
-      if (!isEqual) {
-        return res.status(401).json({
-          success: false,
-          message: "Wrong Password",
-        });
-      }
-    });
+    const isEqual = await bcrypt.compare(oldPassword, row[0].password);
+    console.log(isEqual);
+    if (!isEqual) {
+      return res.status(401).json({
+        success: false,
+        message: "Wrong Password",
+      });
+    }
 
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(newPassword, salt);
@@ -379,26 +379,19 @@ export const changePassword = async (req, res, next) => {
     const sql = "UPDATE users SET password= ? WHERE id= ? AND role = ?";
     const values = [hash, user.id, user.role];
 
-    db.execute(sql, values)
-      .then((result) => {
-        res.status(200).json({
-          success: true,
-          message: "Password change successfully.",
-        });
-      })
-      .catch((err) => {
-        // console.error("Error inserting user:", err);
-        res.status(500).json({
-          success: false,
-          message: "Failed, Try Again.",
-        });
-      });
+    await db.execute(sql, values);
+
+    res.status(200).json({
+      success: true,
+      message: "Password change successfully.",
+    });
+
   } catch (err) {
-    // if (err instanceof ValidationError) {
-    //   return res.status(400).json({
-    //     message: err.message,
-    //   });
-    // }
+    if (err instanceof ValidationError) {
+      return res.status(400).json({
+        message: err.message,
+      });
+    }
 
     res.status(500).json({
       success: false,
@@ -414,7 +407,7 @@ export const forgotPassword = async (req, res, next) => {
   // const role = req.body.role;
 
   try {
-    // await userForgetPasswordValidation.validateAsync(req.body);
+    await userForgetPasswordValidation.validateAsync(req.body);
 
     const [row, fields] = await db.execute(
       "SELECT * FROM users WHERE email = ?",
@@ -456,11 +449,11 @@ export const forgotPassword = async (req, res, next) => {
       message: "Please check your email for password reset.",
     });
   } catch (err) {
-    // if (err instanceof ValidationError) {
-    //   return res.status(400).json({
-    //     message: err.message,
-    //   });
-    // }
+    if (err instanceof ValidationError) {
+      return res.status(400).json({
+        message: err.message,
+      });
+    }
 
     res.status(500).json({
       success: false,
@@ -477,7 +470,7 @@ export const resetPassword = async (req, res, next) => {
   const token = req.params.token;
 
   try {
-    // await userResetPasswordValidation.validateAsync(req.body);
+    await userResetPasswordValidation.validateAsync(req.body);
 
     const [row, fields] = await db.execute(
       "SELECT * FROM users WHERE id = ? ",
@@ -499,44 +492,45 @@ export const resetPassword = async (req, res, next) => {
     }
 
     // -------- verifying JWT token --------
-    jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, user) => {
       if (err) {
         return res.status(401).json({
           success: false,
           message: "Invalid Token",
         });
       }
-    });
 
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(password, salt);
+      try {
+        const salt = bcrypt.genSaltSync(10);
+        const hash = bcrypt.hashSync(password, salt);
 
-    const sql = "UPDATE users SET password= ? WHERE id= ?";
-    const values = [hash];
+        const sql = "UPDATE users SET password = ? WHERE id = ?";
+        const values = [hash, userId];
 
-    db.execute(sql, values)
-      .then((result) => {
+        await db.execute(sql, values);
+
         res.status(200).json({
           success: true,
-          message: "Your new password created successfully.",
+          message: "Your new password has been created successfully.",
         });
-      })
-      .catch((err) => {
+      } catch (error) {
         res.status(500).json({
           success: false,
-          message: "Failed, Try Again.",
+          message: "Failed to reset password. Please try again.",
         });
+      }
+    });
+
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      return res.status(400).json({
+        message: err.message,
       });
-  } catch (error) {
-    // if (err instanceof ValidationError) {
-    //   return res.status(400).json({
-    //     message: err.message,
-    //   });
-    // }
+    }
 
     res.status(500).json({
       success: false,
-      message: "Failed to reset password.",
+      message: "Failed to reset password. Please try again.",
     });
   }
 };
