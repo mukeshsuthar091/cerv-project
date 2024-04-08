@@ -125,7 +125,6 @@ export const verify_OTP = async (req, res, next) => {
     console.log("response:", response);
 
     if (response.isOTPVerified) {
-      
       res.status(200).json({
         success: true,
         isVerify: true,
@@ -169,25 +168,7 @@ const uploadImage = async (img1, img2) => {
 // --------- register API ----------
 
 export const register = async (req, res, next) => {
-  const {
-    name,
-    email,
-    password,
-    country_code,
-    phone_no,
-    role,
-    businessLicenseNum,
-    address,
-    bio,
-    orderType,
-    distanceFeeWaived,
-    distanceAndFeel,
-    foodCategory,
-    driverName,
-    driverLicenseNumber,
-  } = req.body;
-  const business_license_image = req.files.businessLicenseImage[0].path;
-  const driver_license_image = req.files.driverLicenseImage[0].path;
+  const { name, email, password, country_code, phone_no, role } = req.body;
 
   let userId;
 
@@ -195,80 +176,86 @@ export const register = async (req, res, next) => {
     // await userRegisterValidation.validateAsync(req.body);
 
     const [user, field] = await db.execute(
-      "SELECT * FROM users WHERE email = ? AND role = ? ",
-      [email, role]
+      "SELECT * FROM users WHERE email = ?",
+      [email]
     );
 
     if (user.length > 0) {
       return res.status(500).json({
         success: false,
-        message: "user is already register.",
+        message: "user is already register with this email.",
       });
     }
-    // console.log(user);
+    console.log(user);
 
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    const sql =
-      "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)";
-    const values = [name, email, hash, country_code, phone_no, role];
+    if (role == 2) {
+      const [userInsertResult] = await db.execute(
+        "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
+        [name, email, hash, country_code, phone_no, role]
+      );
+      userId = userInsertResult.insertId;
+    }
 
-    await db
-      .execute(sql, values)
-      .then((res) => {
-        return db.execute("SELECT * FROM users WHERE email = ? AND role = ? ", [
-          email,
-          role,
-        ]);
-      })
-      .then(([user, field]) => {
-        // image url getting
-        userId = user[0].id;
-        console.log(userId);
-        let bl_img_url, dl_img_url;
-        uploadImage(business_license_image, driver_license_image).then(
-          ([bl_img_url, dl_img_url]) => {
-            const sql =
-              "INSERT INTO userDetails(user_id, business_license_number, business_license_image, bio, order_type, distance_fee_waived, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    if (role == 1) {
+      const {
+        businessLicenseNum,
+        address,
+        bio,
+        orderType,
+        distanceFeeWaived,
+        distanceAndFeel,
+        foodCategory,
+        driverName,
+        driverLicenseNumber,
+      } = req.body;
+      const business_license_image = req.files.businessLicenseImage[0].path;
+      const driver_license_image = req.files.driverLicenseImage[0].path;
 
-            const values = [
-              userId,
-              businessLicenseNum,
-              bl_img_url,
-              bio,
-              orderType,
-              distanceFeeWaived,
-              distanceAndFeel,
-              foodCategory,
-              driverName,
-              driverLicenseNumber,
-              dl_img_url,
-            ];
-            // console.log(values);
-            return db.execute(sql, values);
-          }
-        );
-      })
-      .then((result) => {
-        console.log(result);
-        return db.execute(
-          "INSERT INTO addresses(user_id, address) VALUES (?, ?)",
-          [userId, address]
-        );
-      })
-      .then((result) => {
-        res.status(200).json({
-          success: true,
-          message: "user registered successfully",
-        });
-      })
-      .catch((err) => {
-        res.status(500).json({
-          success: false,
-          message: "registration failed, Try again.",
-        });
-      });
+      const [userInsertResult] = await db.execute(
+        "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
+        [name, email, hash, country_code, phone_no, role]
+      );
+      userId = userInsertResult.insertId;
+
+      const imageResult = await uploadImage(
+        business_license_image,
+        driver_license_image
+      );
+      const [bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
+
+      console.log(bl_img_url);
+      const sql =
+        "INSERT INTO userDetails(user_id, business_license_number, business_license_image, bio, order_type, distance_fee_waived, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+      const values = [
+        userId,
+        businessLicenseNum,
+        bl_img_url,
+        bio,
+        orderType,
+        distanceFeeWaived,
+        distanceAndFeel,
+        foodCategory,
+        driverName,
+        driverLicenseNumber,
+        dl_img_url,
+      ];
+
+      await db.execute(sql, values);
+
+      await db.execute(
+        "INSERT INTO addresses(user_id, address) VALUES (?, ?)",
+        [userId, address]
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User registered successfully",
+    });
   } catch (err) {
     // if (err instanceof ValidationError) {
     //   return res.status(400).json({
@@ -363,7 +350,7 @@ export const changePassword = async (req, res, next) => {
 
   console.log(user);
   try {
-      // await userChangePasswordValidation.validateAsync(req.body);
+    // await userChangePasswordValidation.validateAsync(req.body);
 
     const [row, fields] = await db.execute(
       "SELECT * FROM users WHERE id = ? AND role = ? ",
@@ -440,15 +427,15 @@ export const forgotPassword = async (req, res, next) => {
         message: "User not found",
       });
     }
-    
+
     const token = jwt.sign(
       { id: row[0].id, email: email, role: row[0].role },
       process.env.JWT_SECRET_KEY,
       { expiresIn: "15m" }
     );
-    
+
     const link = `http://127.0.0.1:4000/api/v1/auth/reset-password/${row[0].id}/${token}`;
-    
+
     transporter
       .sendMail({
         to: email,
@@ -488,7 +475,6 @@ export const resetPassword = async (req, res, next) => {
   const password = req.body.password;
   const userId = req.params.id;
   const token = req.params.token;
-
 
   try {
     // await userResetPasswordValidation.validateAsync(req.body);
