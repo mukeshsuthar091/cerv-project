@@ -38,7 +38,7 @@ const transporter = nodemailer.createTransport({
 export const send_OTP = async (req, res, next) => {
   try {
     await sendOtpValidation.validateAsync(req.body);
-
+    
     const response = await sendOTP(
       req.body.country_code + req.body.phone_no.toString(),
       "",
@@ -88,7 +88,7 @@ export const resend_OTP = async (req, res, next) => {
     console.log(response);
 
     res.status(200).json({
-      otp: response.orderId,
+      orderId: response.orderId,
       message: "OTP resend successfully",
     });
   } catch (err) {
@@ -205,7 +205,6 @@ export const register = async (req, res, next) => {
         address,
         bio,
         orderType,
-        distanceFeeWaived,
         distanceAndFeel,
         foodCategory,
         driverName,
@@ -213,6 +212,8 @@ export const register = async (req, res, next) => {
       } = req.body;
       const business_license_image = req.files.businessLicenseImage[0].path;
       const driver_license_image = req.files.driverLicenseImage[0].path;
+
+      console.log(business_license_image);
 
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
@@ -228,7 +229,7 @@ export const register = async (req, res, next) => {
 
       console.log(bl_img_url);
       const sql =
-        "INSERT INTO userDetails(user_id, business_license_number, business_license_image, bio, order_type, distance_fee_waived, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO userDetails(user_id, business_license_number, business_license_image, bio, order_type, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
       const values = [
         userId,
@@ -236,7 +237,6 @@ export const register = async (req, res, next) => {
         bl_img_url,
         bio,
         orderType,
-        distanceFeeWaived,
         distanceAndFeel,
         foodCategory,
         driverName,
@@ -385,7 +385,6 @@ export const changePassword = async (req, res, next) => {
       success: true,
       message: "Password change successfully.",
     });
-
   } catch (err) {
     if (err instanceof ValidationError) {
       return res.status(400).json({
@@ -520,7 +519,6 @@ export const resetPassword = async (req, res, next) => {
         });
       }
     });
-
   } catch (err) {
     if (err instanceof ValidationError) {
       return res.status(400).json({
