@@ -85,7 +85,7 @@ export const resend_OTP = async (req, res, next) => {
     );
     // const response = await sendOTP(orderId, clientId, clientSecret)
 
-    console.log(response);
+    console.log(response.errorMessage);
 
     res.status(200).json({
       orderId: response.orderId,
@@ -191,7 +191,8 @@ export const register = async (req, res, next) => {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    if (role == 2) {
+    if (role == 2) {      // 2 = customer
+
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
         [name, email, hash, country_code, phone_no, role]
@@ -199,7 +200,7 @@ export const register = async (req, res, next) => {
       userId = userInsertResult.insertId;
     }
 
-    if (role == 1) {
+    if (role == 1) {     // 1 = caterer
       const {
         businessLicenseNum,
         address,
@@ -211,42 +212,48 @@ export const register = async (req, res, next) => {
         driverLicenseNumber,
       } = req.body;
 
-      const business_license_image =
+      const business_license_image_path =
         (req.files &&
           req.files.businessLicenseImage &&
           req.files.businessLicenseImage[0] &&
           req.files.businessLicenseImage[0].path) ||
         null;
-      const driver_license_image =
+      const driver_license_image_path =
         (req.files &&
           req.files.driverLicenseImage &&
           req.files.driverLicenseImage[0] &&
           req.files.driverLicenseImage[0].path) ||
         null
 
+      // getting user id of user
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
         [name, email, hash, country_code, phone_no, role]
       );
       userId = userInsertResult.insertId;
 
+
+      // image storing into cloudinary
       let imageResult;
-      if(business_license_image!=null && driver_license_image != null){
+      if(business_license_image_path!=null && driver_license_image_path != null){
         imageResult = await uploadImage(
-          business_license_image,
-          driver_license_image
+          business_license_image_path,
+          driver_license_image_path
         );
       }
       const [bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
 
       // console.log(bl_img_url);
+
+      // storing user data
       const sql =
-        "INSERT INTO userDetails(user_id, business_license_number, business_license_image, bio, order_type, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO userDetails(user_id, business_license_number, business_license_image, address, bio, order_type, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
       const values = [
         userId,
         businessLicenseNum,
         bl_img_url,
+        address,
         bio,
         orderType,
         distanceAndFeel,
@@ -256,12 +263,7 @@ export const register = async (req, res, next) => {
         dl_img_url,
       ];
 
-      await db.execute(sql, values);
-
-      await db.execute(
-        "INSERT INTO addresses(user_id, address, is_default) VALUES (?, ?, ?)",
-        [userId, address, true]
-      );
+      await db.execute(sql, values);  
     }
 
     res.status(200).json({

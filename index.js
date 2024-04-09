@@ -19,11 +19,11 @@ const port = process.env.PORT || 8000;
 
 // ----------- middleware -------------
 
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use("/api/v1/auth", authRoute);
-app.use("/api/v1/userProfile", userProfileRoute);
+app.use("/api/v1/profile", userProfileRoute);
 
 
 
