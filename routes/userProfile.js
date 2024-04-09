@@ -2,7 +2,7 @@ import express from "express";
 
 import { verifyToken } from "../utils/verifyToken.js";
 import upload from "../uploads/multer.js";
-import { getProfileData } from "../controller/adminController.js";
+import { getProfileData } from "../controller/userProfileController.js";
 
 const router = express.Router();
 

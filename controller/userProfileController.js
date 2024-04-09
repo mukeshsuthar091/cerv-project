@@ -12,7 +12,10 @@ export const getProfileData = async (req, res, next) => {
   try {
     if (role === 2) {
       let [data, field] = await db.execute(
-        "SELECT * FROM users JOIN userDetails ON users.id = userDetails.user_id JOIN addresses ON users.id = addresses.user_id"
+        `select users.id, name, email, phone, addresses.address 
+        from users
+        join addresses on users.id = addresses.user_id and addresses.is_default = 0
+        where users.id = ? and users.role = ?`, [id, role]
       );
 
       console.log(data);

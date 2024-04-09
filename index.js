@@ -9,7 +9,7 @@ import multer from "multer";
 
 import db from "./db/database.js";
 import authRoute from "./routes/auth.js";
-import adminRoute from "./routes/admin.js";
+import userProfileRoute from "./routes/userProfile.js";
 
 dotenv.config();
 // console.log(process.env);
@@ -23,7 +23,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use("/api/v1/auth", authRoute);
-app.use("/api/v1/admin", adminRoute);
+app.use("/api/v1/userProfile", userProfileRoute);
 
 
 

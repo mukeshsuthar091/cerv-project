@@ -38,14 +38,14 @@ const transporter = nodemailer.createTransport({
 export const send_OTP = async (req, res, next) => {
   try {
     await sendOtpValidation.validateAsync(req.body);
-    
+
     const response = await sendOTP(
       req.body.country_code + req.body.phone_no.toString(),
       "",
       "SMS",
       "",
       "",
-      600,
+      7200,
       4,
       process.env.OTPLESS_API_KEY,
       process.env.OTPLESS_API_SECRET
@@ -186,7 +186,7 @@ export const register = async (req, res, next) => {
         message: "user is already register with this email.",
       });
     }
-    console.log(user);
+    // console.log(user);
 
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
@@ -210,10 +210,19 @@ export const register = async (req, res, next) => {
         driverName,
         driverLicenseNumber,
       } = req.body;
-      const business_license_image = req.files.businessLicenseImage[0].path;
-      const driver_license_image = req.files.driverLicenseImage[0].path;
 
-      console.log(business_license_image);
+      const business_license_image =
+        (req.files &&
+          req.files.businessLicenseImage &&
+          req.files.businessLicenseImage[0] &&
+          req.files.businessLicenseImage[0].path) ||
+        null;
+      const driver_license_image =
+        (req.files &&
+          req.files.driverLicenseImage &&
+          req.files.driverLicenseImage[0] &&
+          req.files.driverLicenseImage[0].path) ||
+        null
 
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
@@ -221,13 +230,16 @@ export const register = async (req, res, next) => {
       );
       userId = userInsertResult.insertId;
 
-      const imageResult = await uploadImage(
-        business_license_image,
-        driver_license_image
-      );
+      let imageResult;
+      if(business_license_image!=null && driver_license_image != null){
+        imageResult = await uploadImage(
+          business_license_image,
+          driver_license_image
+        );
+      }
       const [bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
 
-      console.log(bl_img_url);
+      // console.log(bl_img_url);
       const sql =
         "INSERT INTO userDetails(user_id, business_license_number, business_license_image, bio, order_type, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -247,8 +259,8 @@ export const register = async (req, res, next) => {
       await db.execute(sql, values);
 
       await db.execute(
-        "INSERT INTO addresses(user_id, address) VALUES (?, ?)",
-        [userId, address]
+        "INSERT INTO addresses(user_id, address, is_default) VALUES (?, ?, ?)",
+        [userId, address, true]
       );
     }
 
