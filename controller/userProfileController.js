@@ -6,10 +6,12 @@ import db from "../db/database.js";
 import uploads from "../uploads/cloudinary.js";
 import extractPublicID from "../uploads/extract_Public_ID.js";
 
+// --------- get profile details -----------
+
 export const getProfileData = async (req, res, next) => {
   const { id, email, role } = req.user;
 
-  console.log(id, email, role);
+  // console.log(id, email, role);
 
   try {
     let userProfileData;
@@ -66,12 +68,13 @@ export const getProfileData = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      userData: userProfileData,
       message: "Successfully get user data",
+      userData: userProfileData,
     });
-  } catch (err) {
+  } catch (error) {
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Failed, try again.",
     });
   }
@@ -91,6 +94,8 @@ const uploadImage = async (img1_path, img2_path) => {
   return urls;
 };
 
+// --------- edit profile details -----------
+
 export const editProfileData = async (req, res, next) => {
   const userId = req.user.id;
   const userEmail = req.user.email;
@@ -99,20 +104,23 @@ export const editProfileData = async (req, res, next) => {
 
   // console.log(req.body);
   const { name, email, country_code, phone_no, address } = req.body;
-  
+
   try {
-    const [user, field] = await db.execute(
-      "SELECT * FROM users WHERE email = ?",
-      [email]
-    );
-
-    if (user.length > 0) {
-      return res.status(500).json({
-        success: false,
-        message: "Email address is already in use by another user. Please choose a different email.",
-      });
+    
+    if(userEmail !== email){
+      const [user, field] = await db.execute(
+        "SELECT * FROM users WHERE email = ?",
+        [email]
+      );
+  
+      if (user.length > 0) {
+        return res.status(500).json({
+          success: false,
+          message:
+            "Email address is already in use by another user. Please choose a different email.",
+        });
+      }
     }
-
 
     // common query for both
     let sql = `
@@ -205,7 +213,7 @@ export const editProfileData = async (req, res, next) => {
       }
       const [bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
 
-      console.log(bl_img_url, dl_img_url)
+      console.log(bl_img_url, dl_img_url);
 
       // updating user data (caterer)
       await db.execute(sql, values);
@@ -238,7 +246,7 @@ export const editProfileData = async (req, res, next) => {
         driverName,
         driverLicenseNumber,
         dl_img_url,
-        userId
+        userId,
       ];
 
       await db.execute(sql, values);
@@ -251,19 +259,140 @@ export const editProfileData = async (req, res, next) => {
   } catch (error) {
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Update Failed, try again.",
     });
   }
 };
 
+// --------- get all user's address -----------
 
-// storing address of user
-export const setAddress = (req, res, next)=>{
-  const address = req.body.address;
+export const getAllAddress = async (req, res, next) => {
   const userId = req.user.id;
   const userEmail = req.user.email;
   const role = req.user.role;
-  // console.log(address, userEmail, role);
 
-  
-}
+  try {
+    const [data, field] = await db.execute(
+      `SELECT * FROM addresses WHERE user_id = ?`,
+      [userId]
+    );
+
+    console.log(data);
+
+    if (data.length > 0) {
+      res.status(200).json({
+        success: true,
+        message: "Successfully retrieved user's addresses",
+        addresses: data,
+      });
+    } else {
+      res.status(404).json({
+        success: true,
+        message: "User has no addresses",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to retrieve user's addresses",
+    });
+  }
+};
+
+// --------- set user's address -----------
+
+export const setAddress = async (req, res, next) => {
+  const userId = req.user.id;
+  const userEmail = req.user.email;
+  const role = req.user.role;
+  const { label, address } = req.body;
+  console.log(label, address, userEmail, role);
+
+  try {
+    // here's a validation code +++++++++
+
+    if (!label || !address) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill in all required data.",
+      });
+    }
+
+    await db.execute(
+      `INSERT INTO addresses(user_id, label, address) VALUES (?, ?, ?)`,
+      [userId, label, address]
+    );
+
+    console.log(address);
+
+    res.status(200).json({
+      success: true,
+      message: "Address added successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to add address, Try again.",
+    });
+  }
+};
+
+// --------- edit user's address -----------
+
+export const editAddress = async (req, res, next) => {
+  const userId = req.user.id;
+  const userEmail = req.user.email;
+  const role = req.user.role;
+  const { address_id, label, address } = req.body;
+
+  // city, state, postal_code, country will be add later
+
+  try {
+    await db.execute(
+      `UPDATE addresses
+      SET
+        label = ?,
+        address = ?
+      WHERE
+        id = ? AND user_id = ?`,
+      [label, address, address_id, userId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Address updated successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: true,
+      error: error.message,
+      message: "Failed to update address, Try again.",
+    });
+  }
+};
+
+// --------- delete user's address -----------
+
+export const deleteAddress = async (req, res, next) => {
+  const { id, email, role } = req.user;
+  const address_id = req.body.address_id;
+
+  // console.log(address_id, userId)
+  try {
+    await db.execute(`DELETE FROM addresses WHERE id = ?`, [address_id]);
+
+    res.status(200).json({
+      success: true,
+      message: "Address deleted successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to delete address, Try again.",
+    });
+  }
+};

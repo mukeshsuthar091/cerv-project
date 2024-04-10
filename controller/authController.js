@@ -22,6 +22,7 @@ import {
   userResetPasswordValidation,
   verifyOTPValidation,
 } from "../validation/authValidation.js";
+import { error } from "console";
 
 dotenv.config();
 
@@ -42,34 +43,37 @@ export const send_OTP = async (req, res, next) => {
   try {
     await sendOtpValidation.validateAsync(req.body);
 
-    const response = await sendOTP(
-      req.body.country_code + req.body.phone_no.toString(),
-      "",
-      "SMS",
-      "",
-      "",
-      600,
-      4,
-      process.env.OTPLESS_API_KEY,
-      process.env.OTPLESS_API_SECRET
-    );
+    // ------- OTP send Code -------
+    // const response = await sendOTP(
+    //   req.body.country_code + req.body.phone_no.toString(),
+    //   "",
+    //   "SMS",
+    //   "",
+    //   "",
+    //   600,
+    //   4,
+    //   process.env.OTPLESS_API_KEY,
+    //   process.env.OTPLESS_API_SECRET
+    // );
     // const response = await sendOTP(phoneNumber, email, channel, hash, orderId, expiry, otpLength, clientId, clientSecret)
 
-    console.log(response);
+    // console.log(response);
+
 
     res.status(200).json({
-      orderId: response.orderId,
+      orderId: "abcxzy",    // response.orderId
       message: "OTP send successfully",
     });
-  } catch (err) {
-    if (err instanceof ValidationError) {
+  } catch (error) {
+    if (error instanceof ValidationError) {
       return res.status(400).json({
-        message: err.message,
+        message: error.message,
       });
     }
 
     res.status(500).json({
-      err: err,
+      success: false,
+      error: error.message,
       message: "Failed to send OTP",
     });
   }
@@ -81,28 +85,30 @@ export const resend_OTP = async (req, res, next) => {
   try {
     await resendOTPValidation.validateAsync(req.body);
 
-    const response = await resendOTP(
-      req.body.orderId,
-      process.env.OTPLESS_API_KEY,
-      process.env.OTPLESS_API_SECRET
-    );
-    // const response = await sendOTP(orderId, clientId, clientSecret)
+    // ------ OTP resend code ------
+    // const response = await resendOTP(
+    //   req.body.orderId,
+    //   process.env.OTPLESS_API_KEY,
+    //   process.env.OTPLESS_API_SECRET
+    // );
 
-    console.log(response.errorMessage);
-
+    
+    // console.log(response);
+    
     res.status(200).json({
-      orderId: response.orderId,
+      orderId: "abcxzy",      // response.orderId
       message: "OTP resend successfully",
     });
-  } catch (err) {
-    if (err instanceof ValidationError) {
-      return res.status(400).json({
-        message: err.message,
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return error.status(400).json({
+        message: error.message,
       });
     }
 
     res.status(500).json({
-      err: err,
+      error: error.message,
+      success: false,
       message: "Failed to resend OTP",
     });
   }
@@ -115,19 +121,19 @@ export const verify_OTP = async (req, res, next) => {
     // await verifyOTPValidation.validateAsync(req.body);
 
     const { otp, orderId, country_code, phone_no } = req.body;
-    // const { name, email, password, country_code, phone_no, role } = req.body.userData;
 
-    const response = await verifyOTP(
-      "",
-      country_code + phone_no.toString(),
-      orderId,
-      otp,
-      process.env.OTPLESS_API_KEY,
-      process.env.OTPLESS_API_SECRET
-    );
-    console.log("response:", response);
+    // ------- OTP verify Code --------
+    // const response = await verifyOTP(
+    //   "",
+    //   country_code + phone_no.toString(),
+    //   orderId,
+    //   otp,
+    //   process.env.OTPLESS_API_KEY,
+    //   process.env.OTPLESS_API_SECRET
+    // );
+    // console.log("response:", response);
 
-    if (response.isOTPVerified) {
+    if (otp === 1234) {      // response.isOTPVerified
       res.status(200).json({
         success: true,
         isVerify: true,
@@ -140,15 +146,16 @@ export const verify_OTP = async (req, res, next) => {
         message: "Invalid OTP.",
       });
     }
-  } catch (err) {
-    // if (err instanceof ValidationError) {
+  } catch (error) {
+    // if (error instanceof ValidationError) {
     //   return res.status(400).json({
-    //     message: err.message,
+    //     message: error.message,
     //   });
     // }
 
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Failed to verify OTP, Please Try again",
     });
   }
@@ -312,16 +319,17 @@ export const register = async (req, res, next) => {
         message: "User registered successfully",
       });
     }
-  } catch (err) {
-    // if (err instanceof ValidationError) {
+  } catch (error) {
+    // if (error instanceof ValidationError) {
     //   return res.status(400).json({
-    //     message: err.message,
+    //     message: error.message,
     //   });
     // }
 
-    console.log(err);
+    console.log(error.message);
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "registration failed, Try again.",
     });
   }
@@ -383,15 +391,16 @@ export const login = async (req, res, next) => {
         data: { ...rest },
         role,
       });
-  } catch (err) {
-    if (err instanceof ValidationError) {
+  } catch (error) {
+    if (error instanceof ValidationError) {
       return res.status(400).json({
-        message: err.message,
+        message: error.message,
       });
     }
 
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Failed to login",
     });
   }
@@ -441,15 +450,16 @@ export const changePassword = async (req, res, next) => {
       success: true,
       message: "Password change successfully.",
     });
-  } catch (err) {
-    if (err instanceof ValidationError) {
+  } catch (error) {
+    if (error instanceof ValidationError) {
       return res.status(400).json({
-        message: err.message,
+        message: error.message,
       });
     }
 
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Failed to change password.",
     });
   }
@@ -505,15 +515,16 @@ export const forgotPassword = async (req, res, next) => {
       success: true,
       message: "Please check your email for password reset.",
     });
-  } catch (err) {
-    // if (err instanceof ValidationError) {
+  } catch (error) {
+    // if (error instanceof ValidationError) {
     //   return res.status(400).json({
-    //     message: err.message,
+    //     message: error.message,
     //   });
     // }
 
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Failed to reset password.",
     });
   }
@@ -562,15 +573,16 @@ export const resetPasswordLinkVerify = async (req, res, next) => {
       data: { userId: isVerify.id, email: isVerify.email, role: isVerify.role },
       message: "Verified",
     });
-  } catch (err) {
-    // if (err instanceof ValidationError) {
+  } catch (error) {
+    // if (error instanceof ValidationError) {
     //   return res.status(400).json({
-    //     message: err.message,
+    //     message: error.message,
     //   });
     // }
 
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Not verified",
     });
   }
@@ -582,6 +594,9 @@ export const resetPassword = async (req, res, next) => {
   const userId = req.body.userId;
 
   try {
+
+
+
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
@@ -600,6 +615,7 @@ export const resetPassword = async (req, res, next) => {
   } catch (error) {
     res.status(500).json({
       success: false,
+      error: error.message,
       message: "Failed to reset password. Please try again.",
     });
   }

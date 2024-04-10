@@ -3,9 +3,12 @@ import express from "express";
 import { verifyToken } from "../utils/verifyToken.js";
 import upload from "../uploads/multer.js";
 import {
-  editProfileData,
   getProfileData,
+  editProfileData,
+  getAllAddress,
   setAddress,
+  deleteAddress,
+  editAddress,
 } from "../controller/userProfileController.js";
 
 const router = express.Router();
@@ -22,10 +25,12 @@ router.post(
   editProfileData
 );
 
-router.get("/get-address", verifyToken);
+router.get("/get-address", verifyToken, getAllAddress);
 
 router.post("/set-address", verifyToken, setAddress);
 
-// router.put("/set-address", verifyToken, setAddress);
+router.put("/edit-address", verifyToken, editAddress);
+
+router.delete("/delete-address", verifyToken, deleteAddress);
 
 export default router;
