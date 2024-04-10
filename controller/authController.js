@@ -45,7 +45,7 @@ export const send_OTP = async (req, res, next) => {
       "SMS",
       "",
       "",
-      7200,
+      1200,
       4,
       process.env.OTPLESS_API_KEY,
       process.env.OTPLESS_API_SECRET
