@@ -7,6 +7,7 @@ import pkg from "otpless-node-js-auth-sdk";
 const { sendOTP, resendOTP, verifyOTP } = pkg;
 import joiPkg from "joi";
 const { ValidationError } = joiPkg;
+import dotenv from "dotenv";
 
 import db from "../db/database.js";
 // import upload from "../uploads/multer.js";
@@ -21,6 +22,8 @@ import {
   userResetPasswordValidation,
   verifyOTPValidation,
 } from "../validation/authValidation.js";
+
+dotenv.config();
 
 const transporter = nodemailer.createTransport({
   host: "smtp.ethereal.email",
@@ -168,7 +171,8 @@ const uploadImage = async (img1, img2) => {
 // --------- register API ----------
 
 export const register = async (req, res, next) => {
-  const { name, email, password, country_code, phone_no, role } = req.body;
+  const { name, email, password, country_code, phone_no } = req.body;
+  const role = parseInt(req.body.role);
 
   let userId;
 
@@ -191,16 +195,29 @@ export const register = async (req, res, next) => {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    if (role == 2) {      // 2 = customer
+    if (role == 2) {
+      // 2 = customer
+      if (!name || !email || !password || !country_code || !phone_no) {
+        return res.status(400).json({
+          success: false,
+          message: "Please fill in all required data.",
+        });
+      }
 
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
         [name, email, hash, country_code, phone_no, role]
       );
       userId = userInsertResult.insertId;
+
+      return res.status(200).json({
+        success: true,
+        message: "User registered successfully",
+      });
     }
 
-    if (role == 1) {     // 1 = caterer
+    if (role == 1) {
+      // 1 = caterer
       const {
         businessLicenseNum,
         address,
@@ -223,7 +240,30 @@ export const register = async (req, res, next) => {
           req.files.driverLicenseImage &&
           req.files.driverLicenseImage[0] &&
           req.files.driverLicenseImage[0].path) ||
-        null
+        null;
+
+      if (
+        !name ||
+        !email ||
+        !password ||
+        !country_code ||
+        !phone_no ||
+        !businessLicenseNum ||
+        !address ||
+        !bio ||
+        !orderType ||
+        !distanceAndFeel ||
+        !foodCategory ||
+        !driverName ||
+        !driverLicenseNumber ||
+        !business_license_image_path ||
+        !driver_license_image_path
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Please fill in all required data.",
+        });
+      }
 
       // getting user id of user
       const [userInsertResult] = await db.execute(
@@ -232,10 +272,12 @@ export const register = async (req, res, next) => {
       );
       userId = userInsertResult.insertId;
 
-
       // image storing into cloudinary
       let imageResult;
-      if(business_license_image_path!=null && driver_license_image_path != null){
+      if (
+        business_license_image_path != null &&
+        driver_license_image_path != null
+      ) {
         imageResult = await uploadImage(
           business_license_image_path,
           driver_license_image_path
@@ -263,13 +305,13 @@ export const register = async (req, res, next) => {
         dl_img_url,
       ];
 
-      await db.execute(sql, values);  
-    }
+      await db.execute(sql, values);
 
-    res.status(200).json({
-      success: true,
-      message: "User registered successfully",
-    });
+      return res.status(200).json({
+        success: true,
+        message: "User registered successfully",
+      });
+    }
   } catch (err) {
     // if (err instanceof ValidationError) {
     //   return res.status(400).json({
@@ -420,7 +462,7 @@ export const forgotPassword = async (req, res, next) => {
   // const role = req.body.role;
 
   try {
-    await userForgetPasswordValidation.validateAsync(req.body);
+    // await userForgetPasswordValidation.validateAsync(req.body);
 
     const [row, fields] = await db.execute(
       "SELECT * FROM users WHERE email = ?",
@@ -440,7 +482,10 @@ export const forgotPassword = async (req, res, next) => {
       { expiresIn: "15m" }
     );
 
-    const link = `http://127.0.0.1:4000/api/v1/auth/reset-password/${row[0].id}/${token}`;
+    // const link = `http://localhost:4000/api/v1/auth/reset-password/${row[0].id}/${token}`;
+    const link = `https://cerv-project.onrender.com/api/v1/auth/reset-password/${row[0].id}/${token}`;
+
+    // console.log(process.env.ETHEREAL_MAIL_USERNAME);
 
     transporter
       .sendMail({
@@ -456,17 +501,16 @@ export const forgotPassword = async (req, res, next) => {
         console.log("Message sent : %s", info.messageId);
       });
 
-    // console.log(link);
     res.status(200).json({
       success: true,
       message: "Please check your email for password reset.",
     });
   } catch (err) {
-    if (err instanceof ValidationError) {
-      return res.status(400).json({
-        message: err.message,
-      });
-    }
+    // if (err instanceof ValidationError) {
+    //   return res.status(400).json({
+    //     message: err.message,
+    //   });
+    // }
 
     res.status(500).json({
       success: false,
@@ -477,13 +521,12 @@ export const forgotPassword = async (req, res, next) => {
 
 // ---------- reset password API ------------
 
-export const resetPassword = async (req, res, next) => {
-  const password = req.body.password;
+export const resetPasswordLinkVerify = async (req, res, next) => {
   const userId = req.params.id;
   const token = req.params.token;
 
   try {
-    await userResetPasswordValidation.validateAsync(req.body);
+    // await userResetPasswordValidation.validateAsync(req.body);
 
     const [row, fields] = await db.execute(
       "SELECT * FROM users WHERE id = ? ",
@@ -505,41 +548,56 @@ export const resetPassword = async (req, res, next) => {
     }
 
     // -------- verifying JWT token --------
-    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, user) => {
-      if (err) {
-        return res.status(401).json({
-          success: false,
-          message: "Invalid Token",
-        });
-      }
+    const isVerify = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-      try {
-        const salt = bcrypt.genSaltSync(10);
-        const hash = bcrypt.hashSync(password, salt);
-
-        const sql = "UPDATE users SET password = ? WHERE id = ?";
-        const values = [hash, userId];
-
-        await db.execute(sql, values);
-
-        res.status(200).json({
-          success: true,
-          message: "Your new password has been created successfully.",
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: "Failed to reset password. Please try again.",
-        });
-      }
-    });
-  } catch (err) {
-    if (err instanceof ValidationError) {
-      return res.status(400).json({
-        message: err.message,
+    if (!isVerify) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid Token",
       });
     }
 
+    res.status(200).json({
+      success: true,
+      data: { userId: isVerify.id, email: isVerify.email, role: isVerify.role },
+      message: "Verified",
+    });
+  } catch (err) {
+    // if (err instanceof ValidationError) {
+    //   return res.status(400).json({
+    //     message: err.message,
+    //   });
+    // }
+
+    res.status(500).json({
+      success: false,
+      message: "Not verified",
+    });
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  const password = req.body.password;
+  const email = req.body.email;
+  const userId = req.body.userId;
+
+  try {
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+
+    // const sql = "UPDATE users SET password = ? WHERE id = ? AND email = ?";
+    // const values = [hash, userId, email];
+
+    await db.execute(`UPDATE users SET password = ? WHERE email = ?`, [
+      hash,
+      email,
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Your new password has been created successfully.",
+    });
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to reset password. Please try again.",

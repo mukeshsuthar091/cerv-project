@@ -9,7 +9,7 @@ import extractPublicID from "../uploads/extract_Public_ID.js";
 export const getProfileData = async (req, res, next) => {
   const { id, email, role } = req.user;
 
-  // console.log(id, email, role);
+  console.log(id, email, role);
 
   try {
     let userProfileData;
@@ -255,3 +255,15 @@ export const editProfileData = async (req, res, next) => {
     });
   }
 };
+
+
+// storing address of user
+export const setAddress = (req, res, next)=>{
+  const address = req.body.address;
+  const userId = req.user.id;
+  const userEmail = req.user.email;
+  const role = req.user.role;
+  // console.log(address, userEmail, role);
+
+  
+}

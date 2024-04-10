@@ -5,6 +5,7 @@ import upload from "../uploads/multer.js";
 import {
   editProfileData,
   getProfileData,
+  setAddress,
 } from "../controller/userProfileController.js";
 
 const router = express.Router();
@@ -20,5 +21,11 @@ router.post(
   verifyToken,
   editProfileData
 );
+
+router.get("/get-address", verifyToken);
+
+router.post("/set-address", verifyToken, setAddress);
+
+// router.put("/set-address", verifyToken, setAddress);
 
 export default router;

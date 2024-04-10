@@ -7,6 +7,7 @@ import {
   register,
   resend_OTP,
   resetPassword,
+  resetPasswordLinkVerify,
   send_OTP,
   verify_OTP,
 } from "../controller/authController.js";
@@ -36,6 +37,8 @@ router.put("/change-password", verifyToken, changePassword);
 
 router.post("/forgot-password", forgotPassword);
 
-router.post("/reset-password/:id/:token", resetPassword);
+router.get("/reset-password/:id/:token", resetPasswordLinkVerify);
+
+router.post("/reset-password/", resetPassword);
 
 export default router;
