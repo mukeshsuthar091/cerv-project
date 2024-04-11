@@ -101,7 +101,7 @@ export const resend_OTP = async (req, res, next) => {
     });
   } catch (error) {
     if (error instanceof ValidationError) {
-      return error.status(400).json({
+      return res.status(400).json({
         message: error.message,
       });
     }
