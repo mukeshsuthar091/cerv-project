@@ -80,19 +80,7 @@ export const getProfileData = async (req, res, next) => {
   }
 };
 
-// ------ Image upload for registration ------
 
-// const uploadImage = async (img1_path, img2_path) => {
-//   const urls = [];
-
-//   const business_license_image_newPath = await uploads(img1_path);
-//   const driver_license_image_newPath = await uploads(img2_path);
-
-//   urls.push(business_license_image_newPath.secure_url);
-//   urls.push(driver_license_image_newPath.secure_url);
-
-//   return urls;
-// };
 
 // --------- edit profile details -----------
 
@@ -107,7 +95,7 @@ export const editProfileData = async (req, res, next) => {
       req.files.image[0] &&
       req.files.image[0].path) ||
     null;
-
+  // console.log(req.files);
   try {
     if (userEmail !== email) {
       const [user, field] = await db.execute(

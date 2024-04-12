@@ -169,7 +169,6 @@ export const register = async (req, res, next) => {
   const image_path =
     (req.files && req.files.image && req.files.image[0] && req.files.image[0].path) || null;
 
-
   let userId;
 
   try {
