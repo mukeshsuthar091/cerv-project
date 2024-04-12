@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 
 import db from "../db/database.js";
 // import upload from "../uploads/multer.js";
-import uploads from "../uploads/cloudinary.js";
+import uploader from "../uploads/uploader.js";
 import {
   resendOTPValidation,
   sendOtpValidation,
@@ -22,7 +22,6 @@ import {
   userResetPasswordValidation,
   verifyOTPValidation,
 } from "../validation/authValidation.js";
-import { error } from "console";
 
 dotenv.config();
 
@@ -59,9 +58,8 @@ export const send_OTP = async (req, res, next) => {
 
     // console.log(response);
 
-
     res.status(200).json({
-      orderId: "abcxzy",    // response.orderId
+      orderId: "abcxzy", // response.orderId
       message: "OTP send successfully",
     });
   } catch (error) {
@@ -92,16 +90,15 @@ export const resend_OTP = async (req, res, next) => {
     //   process.env.OTPLESS_API_SECRET
     // );
 
-    
     // console.log(response);
-    
+
     res.status(200).json({
-      orderId: "abcxzy",      // response.orderId
+      orderId: "abcxzy", // response.orderId
       message: "OTP resend successfully",
     });
   } catch (error) {
     if (error instanceof ValidationError) {
-      return error.status(400).json({
+      return res.status(400).json({
         message: error.message,
       });
     }
@@ -133,7 +130,8 @@ export const verify_OTP = async (req, res, next) => {
     // );
     // console.log("response:", response);
 
-    if (otp === 1234) {      // response.isOTPVerified
+    if (otp === 1234) {
+      // response.isOTPVerified
       res.status(200).json({
         success: true,
         isVerify: true,
@@ -161,25 +159,16 @@ export const verify_OTP = async (req, res, next) => {
   }
 };
 
-// ------ Image upload for registration ------
 
-const uploadImage = async (img1, img2) => {
-  const urls = [];
-
-  const business_license_image_newPath = await uploads(img1);
-  const driver_license_image_newPath = await uploads(img2);
-
-  urls.push(business_license_image_newPath.secure_url);
-  urls.push(driver_license_image_newPath.secure_url);
-
-  return urls;
-};
 
 // --------- register API ----------
 
 export const register = async (req, res, next) => {
   const { name, email, password, country_code, phone_no } = req.body;
   const role = parseInt(req.body.role);
+  const image_path =
+    (req.files && req.files.image && req.files.image[0] && req.files.image[0].path) || null;
+
 
   let userId;
 
@@ -202,8 +191,8 @@ export const register = async (req, res, next) => {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    if (role == 2) {
-      // 2 = customer
+    if (role == 2) {     // 2 = customer
+
       if (!name || !email || !password || !country_code || !phone_no) {
         return res.status(400).json({
           success: false,
@@ -217,14 +206,32 @@ export const register = async (req, res, next) => {
       );
       userId = userInsertResult.insertId;
 
-      return res.status(200).json({
-        success: true,
-        message: "User registered successfully",
-      });
+      
+      // ------ Image uploading ------
+      if (userId) {
+        let imageResult;
+        if (image_path != null) {
+          imageResult = await uploader(image_path);
+        }
+        const [image_url = ""] = imageResult ?? [];
+        console.log("image_url: ",image_url);
+
+        if (image_url) {
+          await db.execute("UPDATE users SET image = ? WHERE id = ?", [
+            image_url,
+            userId,
+          ]);
+        }
+      }
+
+      // return res.status(200).json({
+      //   success: true,
+      //   message: "User registered successfully",
+      // });
     }
 
-    if (role == 1) {
-      // 1 = caterer
+    if (role == 1) {    // 1 = caterer
+      
       const {
         businessLicenseNum,
         address,
@@ -272,6 +279,8 @@ export const register = async (req, res, next) => {
         });
       }
 
+      
+
       // getting user id of user
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
@@ -279,29 +288,13 @@ export const register = async (req, res, next) => {
       );
       userId = userInsertResult.insertId;
 
-      // image storing into cloudinary
-      let imageResult;
-      if (
-        business_license_image_path != null &&
-        driver_license_image_path != null
-      ) {
-        imageResult = await uploadImage(
-          business_license_image_path,
-          driver_license_image_path
-        );
-      }
-      const [bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
-
-      // console.log(bl_img_url);
-
-      // storing user data
+      // storing user details
       const sql =
-        "INSERT INTO userDetails(user_id, business_license_number, business_license_image, address, bio, order_type, distance_and_fee, food_category, driver_name, driver_license_number, driver_license_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO userDetails(user_id, business_license_number, address, bio, order_type, distance_and_fee, food_category, driver_name, driver_license_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
       const values = [
         userId,
         businessLicenseNum,
-        bl_img_url,
         address,
         bio,
         orderType,
@@ -309,16 +302,44 @@ export const register = async (req, res, next) => {
         foodCategory,
         driverName,
         driverLicenseNumber,
-        dl_img_url,
       ];
 
-      await db.execute(sql, values);
+      const [user_detail_id] = await db.execute(sql, values);
+      let userDetailsId = user_detail_id.insertId;
 
-      return res.status(200).json({
-        success: true,
-        message: "User registered successfully",
-      });
+      console.log("userDetailsId", userDetailsId);
+
+      if(userId){
+        // image storing into cloudinary
+        let imageResult;
+        if (business_license_image_path != null && driver_license_image_path != null) {
+          imageResult = await uploader(
+            image_path,
+            business_license_image_path,
+            driver_license_image_path
+          );
+        }
+        console.log("imageResult", imageResult);
+        const [img_url = "", bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
+        
+
+        await db.execute(
+          "UPDATE users SET image = ? WHERE id = ?",
+          [img_url, userId]
+        );
+  
+        await db.execute(
+          `UPDATE userDetails SET business_license_image = ?, driver_license_image = ? WHERE user_id = ? AND id = ?`,
+          [bl_img_url, dl_img_url, userId, userDetailsId]
+        );
+      }
+
     }
+
+    return res.status(200).json({
+      success: true,
+      message: "User registered successfully",
+    });
   } catch (error) {
     // if (error instanceof ValidationError) {
     //   return res.status(400).json({
@@ -347,7 +368,7 @@ export const login = async (req, res, next) => {
       "SELECT * FROM users WHERE email = ?",
       [userEmail]
     );
-    // console.log(user.length);
+
     if (!user.length) {
       return res.status(404).json({
         success: false,
@@ -367,11 +388,8 @@ export const login = async (req, res, next) => {
         message: "Incorrect email or password.",
       });
     }
-    // console.log(user);
 
     const { id, email, password, role, ...rest } = user[0];
-
-    // console.log(email,password, role, id,);
 
     const token = jwt.sign(
       { id: id, email: email, role: role },
@@ -594,9 +612,6 @@ export const resetPassword = async (req, res, next) => {
   const userId = req.body.userId;
 
   try {
-
-
-
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 

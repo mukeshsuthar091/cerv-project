@@ -1,7 +1,7 @@
 import express from "express";
 
 import { verifyToken } from "../utils/verifyToken.js";
-import upload from "../uploads/multer.js";
+import upload from "../middleware/multer.js";
 import {
   getProfileData,
   editProfileData,
@@ -18,6 +18,7 @@ router.get("/get-profile-data", verifyToken, getProfileData);
 router.post(
   "/edit-profile-data",
   upload.fields([
+    { name: "image", maxCount: 1},
     { name: "businessLicenseImage", maxCount: 1 },
     { name: "driverLicenseImage", maxCount: 1 },
   ]),
@@ -31,6 +32,6 @@ router.post("/set-address", verifyToken, setAddress);
 
 router.put("/edit-address", verifyToken, editAddress);
 
-router.delete("/delete-address", verifyToken, deleteAddress);
+router.delete("/delete-address/:address_id", verifyToken, deleteAddress);
 
 export default router;

@@ -3,7 +3,7 @@ const { ValidationError } = joiPkg;
 import { v2 as cloudinary } from "cloudinary";
 
 import db from "../db/database.js";
-import uploads from "../uploads/cloudinary.js";
+import uploader from "../uploads/uploader.js";
 import extractPublicID from "../uploads/extract_Public_ID.js";
 
 // --------- get profile details -----------
@@ -82,17 +82,17 @@ export const getProfileData = async (req, res, next) => {
 
 // ------ Image upload for registration ------
 
-const uploadImage = async (img1_path, img2_path) => {
-  const urls = [];
+// const uploadImage = async (img1_path, img2_path) => {
+//   const urls = [];
 
-  const business_license_image_newPath = await uploads(img1_path);
-  const driver_license_image_newPath = await uploads(img2_path);
+//   const business_license_image_newPath = await uploads(img1_path);
+//   const driver_license_image_newPath = await uploads(img2_path);
 
-  urls.push(business_license_image_newPath.secure_url);
-  urls.push(driver_license_image_newPath.secure_url);
+//   urls.push(business_license_image_newPath.secure_url);
+//   urls.push(driver_license_image_newPath.secure_url);
 
-  return urls;
-};
+//   return urls;
+// };
 
 // --------- edit profile details -----------
 
@@ -100,19 +100,21 @@ export const editProfileData = async (req, res, next) => {
   const userId = req.user.id;
   const userEmail = req.user.email;
   const role = req.user.role;
-  console.log(userId, userEmail, role);
-
-  // console.log(req.body);
   const { name, email, country_code, phone_no, address } = req.body;
+  const image_path =
+    (req.files &&
+      req.files.image &&
+      req.files.image[0] &&
+      req.files.image[0].path) ||
+    null;
 
   try {
-    
-    if(userEmail !== email){
+    if (userEmail !== email) {
       const [user, field] = await db.execute(
         "SELECT * FROM users WHERE email = ?",
         [email]
       );
-  
+
       if (user.length > 0) {
         return res.status(500).json({
           success: false,
@@ -136,21 +138,56 @@ export const editProfileData = async (req, res, next) => {
 
     let values = [name, email, country_code, phone_no, userId];
 
-    if (role === 2) {
+    if (role == 2) {
       // updating user data (customer) and address
       await db.execute(sql, values);
+
       await db.execute(
         `UPDATE addresses
-        SET 
+        SET
         address = ?
         WHERE
         user_id = ?`,
         [address, userId]
       );
-      console.log(name, email, country_code, phone_no, address);
+
+      let imageResult;
+      if (image_path != null) {
+        const [data, field] = await db.execute(
+          `SELECT image FROM users WHERE id = ?`,
+          [userId]
+        );
+        const profile_image = extractPublicID(data[0].image);
+
+        // console.log(profile_image);
+
+        const result = await cloudinary.api
+          .delete_resources([profile_image], {
+            type: "upload",
+            resource_type: "image",
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+
+        // console.log("result= ", result);
+
+        imageResult = await uploader(image_path);
+        const [image_url = ""] = imageResult ?? [];
+        // console.log("image_url: ", image_url);
+
+        if (image_url) {
+          await db.execute("UPDATE users SET image = ? WHERE id = ?", [
+            image_url,
+            userId,
+          ]);
+        }
+      }
+
+      // console.log(name, email, country_code, phone_no, address);
     }
 
-    if (role === 1) {
+    if (role == 1) {
       const {
         businessLicenseNum,
         address,
@@ -175,69 +212,26 @@ export const editProfileData = async (req, res, next) => {
           req.files.driverLicenseImage[0].path) ||
         null;
 
-      // finding images to update
-      const [data, field] = await db.execute(
-        `SELECT business_license_image, driver_license_image FROM userDetails WHERE user_id = ?`,
-        [userId]
-      );
-
-      console.log(data);
-      const bl_publicId = extractPublicID(data[0].business_license_image);
-      const dl_publicId = extractPublicID(data[0].driver_license_image);
-
-      console.log(bl_publicId);
-      console.log(dl_publicId);
-
-      // image deleting from cloudinary
-      const result = await cloudinary.api
-        .delete_resources([bl_publicId, dl_publicId], {
-          type: "upload",
-          resource_type: "image",
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-
-      console.log("result= ", result);
-
-      // image storing into cloudinary
-      let imageResult;
-      if (
-        business_license_image_path != null &&
-        driver_license_image_path != null
-      ) {
-        imageResult = await uploadImage(
-          business_license_image_path,
-          driver_license_image_path
-        );
-      }
-      const [bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
-
-      console.log(bl_img_url, dl_img_url);
-
       // updating user data (caterer)
       await db.execute(sql, values);
 
       // updating additional data of user(caterer)
       sql = `
           UPDATE userDetails
-          SET 
+          SET
             business_license_number = ?,
-              business_license_image = ?,
               address = ?,
               bio = ?,
               order_type = ?,
               distance_and_fee = ?,
               food_category = ?,
               driver_name = ?,
-              driver_license_number = ?,
-              driver_license_image = ?
-          WHERE 
+              driver_license_number = ?
+          WHERE
             user_id = ? `;
 
       values = [
         businessLicenseNum,
-        bl_img_url,
         address,
         bio,
         orderType,
@@ -245,11 +239,96 @@ export const editProfileData = async (req, res, next) => {
         foodCategory,
         driverName,
         driverLicenseNumber,
-        dl_img_url,
         userId,
       ];
 
       await db.execute(sql, values);
+
+
+      // finding images to update
+      const [data, field] = await db.execute(
+        `SELECT image, business_license_image, driver_license_image 
+        FROM users
+        join userDetails on users.id = userDetails.user_id 
+        WHERE users.id = ?`,
+        [userId]
+      );
+
+      let imageResult;
+
+      if (image_path != null) {
+        const profile_image = extractPublicID(data[0].image);
+
+        // image deleting from cloudinary
+        const result = await cloudinary.api
+          .delete_resources([profile_image], {
+            type: "upload",
+            resource_type: "image",
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+
+        imageResult = await uploader(image_path);
+        const [image_url = ""] = imageResult ?? [];
+
+        await db.execute("UPDATE users SET image = ? WHERE id = ?", [
+          image_url,
+          userId,
+        ]);
+      }
+
+      if (business_license_image_path != null) {
+        const bl_publicId = extractPublicID(data[0].business_license_image);
+
+        // image deleting from cloudinary
+        const result = await cloudinary.api
+          .delete_resources([bl_publicId], {
+            type: "upload",
+            resource_type: "image",
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+
+        imageResult = await uploader(business_license_image_path);
+        const [bl_img_url = ""] = imageResult ?? [];
+
+        await db.execute(
+          `UPDATE userDetails
+          SET
+              business_license_image = ?
+          WHERE
+            user_id = ? `,
+          [bl_img_url, userId]
+        );
+      }
+
+      if (driver_license_image_path != null) {
+        const dl_publicId = extractPublicID(data[0].driver_license_image);
+
+        // image deleting from cloudinary
+        const result = await cloudinary.api
+          .delete_resources([dl_publicId], {
+            type: "upload",
+            resource_type: "image",
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+
+        imageResult = await uploader(driver_license_image_path);
+        const [dl_img_url = ""] = imageResult ?? [];
+
+        await db.execute(
+          `UPDATE userDetails
+          SET
+              driver_license_image = ?
+          WHERE
+            user_id = ? `,
+          [dl_img_url, userId]
+        );
+      }
     }
 
     res.status(200).json({
@@ -347,7 +426,6 @@ export const editAddress = async (req, res, next) => {
   const userEmail = req.user.email;
   const role = req.user.role;
   const { address_id, label, address } = req.body;
-
   // city, state, postal_code, country will be add later
 
   try {
@@ -378,7 +456,7 @@ export const editAddress = async (req, res, next) => {
 
 export const deleteAddress = async (req, res, next) => {
   const { id, email, role } = req.user;
-  const address_id = req.body.address_id;
+  const address_id = req.params.address_id;
 
   // console.log(address_id, userId)
   try {

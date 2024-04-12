@@ -14,8 +14,9 @@ cloudinary.config({
 const uploads = async(filePath) => {
   try{
     const result = await cloudinary.uploader.upload(filePath, {folder: "cerv-project-images"});
-    // console.log(result);
+
     return result;
+
   }catch(err){
     console.log(err.message);
   }

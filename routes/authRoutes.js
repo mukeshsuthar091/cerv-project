@@ -12,7 +12,7 @@ import {
   verify_OTP,
 } from "../controller/authController.js";
 import { verifyToken } from "../utils/verifyToken.js";
-import upload from "../uploads/multer.js";
+import upload from "../middleware/multer.js";
 
 const router = express.Router();
 
@@ -25,6 +25,7 @@ router.post("/verify-otp", verify_OTP);
 router.post(
   "/register",
   upload.fields([
+    { name: "image", maxCount: 1},
     { name: "businessLicenseImage", maxCount: 1 },
     { name: "driverLicenseImage", maxCount: 1 },
   ]),

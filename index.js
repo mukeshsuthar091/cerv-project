@@ -8,8 +8,13 @@ import multer from "multer";
 
 
 import db from "./db/database.js";
-import authRoute from "./routes/auth.js";
-import userProfileRoute from "./routes/userProfile.js";
+import authRoute from "./routes/authRoutes.js";
+import userProfileRoute from "./routes/userProfileRoutes.js";
+import catererRoute from "./routes/catererRoutes.js";
+// import productRoute from "./routes/productRoutes.js";
+// import categoryRoutes from "./routes/categoryRoutes.js";
+// import subCategoryRoutes from "./routes/subCategoryRoutes.js";
+
 
 dotenv.config();
 // console.log(process.env);
@@ -24,6 +29,8 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/profile", userProfileRoute);
+app.use("/api/v1/caterers", catererRoute);
+// app.use("/api/v1/products", productRoute);
 
 
 
