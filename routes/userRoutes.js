@@ -6,12 +6,12 @@ import { getAllCaterer, getAllProducts, getAllSubCategory, getSingleCaterer } fr
 const router = express.Router();
 
 
-router.get("/get-caterers", getAllCaterer);
+router.get("/caterers", getAllCaterer);
 
-router.get("/get-caterer/:catererId", getSingleCaterer);
+router.get("/caterers/:catererId", getSingleCaterer);
 
-router.get("/get-sub-category/:categoryId", getAllSubCategory)
+router.get("/categories/:categoryId/sub-categories", getAllSubCategory)
 
-router.get("/get-products/:subCategoryId", getAllProducts)
+router.get("/sub-categories/:subCategoryId/products", getAllProducts)
 
 export default router;

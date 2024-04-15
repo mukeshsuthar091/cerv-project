@@ -159,15 +159,17 @@ export const verify_OTP = async (req, res, next) => {
   }
 };
 
-
-
 // --------- register API ----------
 
 export const register = async (req, res, next) => {
   const { name, email, password, country_code, phone_no } = req.body;
   const role = parseInt(req.body.role);
   const image_path =
-    (req.files && req.files.image && req.files.image[0] && req.files.image[0].path) || null;
+    (req.files &&
+      req.files.image &&
+      req.files.image[0] &&
+      req.files.image[0].path) ||
+    null;
 
   let userId;
 
@@ -190,7 +192,8 @@ export const register = async (req, res, next) => {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    if (role == 2) {     // 2 = customer
+    if (role == 2) {
+      // 2 = customer
 
       if (!name || !email || !password || !country_code || !phone_no) {
         return res.status(400).json({
@@ -205,15 +208,11 @@ export const register = async (req, res, next) => {
       );
       userId = userInsertResult.insertId;
 
-      
       // ------ Image uploading ------
-      if (userId) {
-        let imageResult;
-        if (image_path != null) {
-          imageResult = await uploader(image_path);
-        }
+      if (userId && image_path) {
+        let imageResult = await uploader(image_path);
         const [image_url = ""] = imageResult ?? [];
-        console.log("image_url: ",image_url);
+        // console.log("image_url: ", image_url);
 
         if (image_url) {
           await db.execute("UPDATE users SET image = ? WHERE id = ?", [
@@ -229,8 +228,9 @@ export const register = async (req, res, next) => {
       // });
     }
 
-    if (role == 1) {    // 1 = caterer
-      
+    if (role == 1) {
+      // 1 = caterer
+
       const {
         businessLicenseNum,
         address,
@@ -278,8 +278,6 @@ export const register = async (req, res, next) => {
         });
       }
 
-      
-
       // getting user id of user
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
@@ -308,31 +306,27 @@ export const register = async (req, res, next) => {
 
       console.log("userDetailsId", userDetailsId);
 
-      if(userId){
+      if (userId && business_license_image_path && driver_license_image_path) {
         // image storing into cloudinary
-        let imageResult;
-        if (business_license_image_path != null && driver_license_image_path != null) {
-          imageResult = await uploader(
-            image_path,
-            business_license_image_path,
-            driver_license_image_path
-          );
-        }
-        console.log("imageResult", imageResult);
-        const [img_url = "", bl_img_url = "", dl_img_url = ""] = imageResult ?? [];
-        
-
-        await db.execute(
-          "UPDATE users SET image = ? WHERE id = ?",
-          [img_url, userId]
+        let imageResult = await uploader(
+          image_path,
+          business_license_image_path,
+          driver_license_image_path
         );
-  
+        // console.log("imageResult", imageResult);
+        const [img_url = "", bl_img_url = "", dl_img_url = ""] =
+          imageResult ?? [];
+
+        await db.execute("UPDATE users SET image = ? WHERE id = ?", [
+          img_url,
+          userId,
+        ]);
+
         await db.execute(
           `UPDATE userDetails SET business_license_image = ?, driver_license_image = ? WHERE user_id = ? AND id = ?`,
           [bl_img_url, dl_img_url, userId, userDetailsId]
         );
       }
-
     }
 
     return res.status(200).json({
@@ -396,18 +390,33 @@ export const login = async (req, res, next) => {
       { expiresIn: "1d" }
     );
 
+    // Set the token in the HTTP response header
+    res.setHeader("Authorization", `Bearer ${token}`);
+
     res
-      .cookie("accessToken", token, {
-        httpOnly: true,
-        expires: token.expiresIn,
-      })
       .status(200)
       .json({
+        success: true,
+        message: "Login successful",
         token,
-        email,
-        data: { ...rest },
-        role,
+        data: {id, email, role, ...rest },
       });
+
+    // res
+    //   .cookie("accessToken", token, {
+    //     httpOnly: true,
+    //     expires: token.expiresIn,
+    //   })
+    //   .status(200)
+    //   .json({
+    //     success: true,
+    //     message: "Login successful",
+    //     token,
+    //     // id,
+    //     // email,
+    //     data: {id, email, role, ...rest },
+    //     // role,
+    //   });
   } catch (error) {
     if (error instanceof ValidationError) {
       return res.status(400).json({
@@ -587,7 +596,11 @@ export const resetPasswordLinkVerify = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: { userId: isVerify.id, email: isVerify.email, role: isVerify.role },
+      data: {
+        userId: isVerify.id,
+        email: isVerify.email,
+        role: isVerify.role,
+      },
       message: "Verified",
     });
   } catch (error) {

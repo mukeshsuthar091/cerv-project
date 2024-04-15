@@ -26,12 +26,12 @@ router.post(
   editProfileData
 );
 
-router.get("/get-address", verifyToken, getAllAddress);
+router.get("/addresses", verifyToken, getAllAddress);
 
-router.post("/set-address", verifyToken, setAddress);
+router.post("/addresses", verifyToken, setAddress);
 
-router.put("/edit-address", verifyToken, editAddress);
+router.put("/addresses/:addressId", verifyToken, editAddress);
 
-router.delete("/delete-address/:address_id", verifyToken, deleteAddress);
+router.delete("/addresses/:addressId", verifyToken, deleteAddress);
 
 export default router;

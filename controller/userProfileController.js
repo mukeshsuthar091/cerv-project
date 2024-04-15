@@ -62,14 +62,14 @@ export const getProfileData = async (req, res, next) => {
         [id, role]
       );
 
-      // userProfileData = data[0];
+      userProfileData = data[0];
       console.log(data);
     }
 
     res.status(200).json({
       success: true,
-      message: "Successfully get user data",
       userData: userProfileData,
+      message: "Successfully get user data",
     });
   } catch (error) {
     res.status(500).json({
@@ -145,12 +145,12 @@ export const editProfileData = async (req, res, next) => {
           `SELECT image FROM users WHERE id = ?`,
           [userId]
         );
-        const profile_image = extractPublicID(data[0].image);
+        const publicID = await extractPublicID(data[0].image || "");
 
-        // console.log(profile_image);
+        // console.log(publicID);
 
         const result = await cloudinary.api
-          .delete_resources([profile_image], {
+          .delete_resources([publicID || ""], {
             type: "upload",
             resource_type: "image",
           })
@@ -245,11 +245,11 @@ export const editProfileData = async (req, res, next) => {
       let imageResult;
 
       if (image_path != null) {
-        const profile_image = extractPublicID(data[0].image);
+        const publicID = await extractPublicID(data[0].image || "");
 
         // image deleting from cloudinary
         const result = await cloudinary.api
-          .delete_resources([profile_image], {
+          .delete_resources([publicID || ""], {
             type: "upload",
             resource_type: "image",
           })
@@ -267,11 +267,11 @@ export const editProfileData = async (req, res, next) => {
       }
 
       if (business_license_image_path != null) {
-        const bl_publicId = extractPublicID(data[0].business_license_image);
+        const bl_publicId = await extractPublicID(data[0].business_license_image || "");
 
         // image deleting from cloudinary
         const result = await cloudinary.api
-          .delete_resources([bl_publicId], {
+          .delete_resources([bl_publicId || ""], {
             type: "upload",
             resource_type: "image",
           })
@@ -293,11 +293,11 @@ export const editProfileData = async (req, res, next) => {
       }
 
       if (driver_license_image_path != null) {
-        const dl_publicId = extractPublicID(data[0].driver_license_image);
+        const dl_publicId = await extractPublicID(data[0].driver_license_image || "");
 
         // image deleting from cloudinary
         const result = await cloudinary.api
-          .delete_resources([dl_publicId], {
+          .delete_resources([dl_publicId || ""], {
             type: "upload",
             resource_type: "image",
           })
@@ -356,6 +356,7 @@ export const getAllAddress = async (req, res, next) => {
     } else {
       res.status(404).json({
         success: true,
+        data: data,
         message: "User has no addresses",
       });
     }
@@ -411,9 +412,8 @@ export const setAddress = async (req, res, next) => {
 
 export const editAddress = async (req, res, next) => {
   const userId = req.user.id;
-  const userEmail = req.user.email;
-  const role = req.user.role;
-  const { address_id, label, address } = req.body;
+  const addressId = req.params.addressId;
+  const { label, address } = req.body;
   // city, state, postal_code, country will be add later
 
   try {
@@ -424,7 +424,7 @@ export const editAddress = async (req, res, next) => {
         address = ?
       WHERE
         id = ? AND user_id = ?`,
-      [label, address, address_id, userId]
+      [label, address, addressId, userId]
     );
 
     res.status(200).json({
@@ -444,11 +444,11 @@ export const editAddress = async (req, res, next) => {
 
 export const deleteAddress = async (req, res, next) => {
   const { id, email, role } = req.user;
-  const address_id = req.params.address_id;
+  const addressId = req.params.addressId;
 
   // console.log(address_id, userId)
   try {
-    await db.execute(`DELETE FROM addresses WHERE id = ?`, [address_id]);
+    await db.execute(`DELETE FROM addresses WHERE id = ?`, [addressId]);
 
     res.status(200).json({
       success: true,

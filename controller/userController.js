@@ -1,15 +1,21 @@
+import joiPkg from "joi";
+const { ValidationError } = joiPkg;
+
 import db from "../db/database.js";
+
+//  ----------------------
 
 export const getAllCaterer = async (req, res, next) => {
   try {
-    const [data, field] = await db.execute(`
+    const [caterers] = await db.execute(`
     SELECT
       users.id,
       users.image,
       users.name,
       users.email,
       userDetails.address,
-      COALESCE(ROUND(avg(ratings.rating_value), 1), 0) AS rating
+      COALESCE(ROUND(avg(ratings.rating_value), 1), 0) AS rating,
+      userDetails.cost_per_plat
     FROM
         users
     LEFT JOIN
@@ -21,11 +27,11 @@ export const getAllCaterer = async (req, res, next) => {
     GROUP BY
         users.id, users.name, users.email, userDetails.address`);
 
-    console.log(data);
+    console.log(caterers);
 
     res.status(200).json({
       success: true,
-      data: data,
+      data: caterers,
       message: "Successfully retrieved caterer's data",
     });
   } catch (error) {
@@ -41,7 +47,7 @@ export const getSingleCaterer = async (req, res, next) => {
   const catererId = req.params.catererId;
 
   try {
-    const [data, field] = await db.execute(
+    const [catererDetails] = await db.execute(
       `SELECT
           users.id,
           users.image,
@@ -65,19 +71,19 @@ export const getSingleCaterer = async (req, res, next) => {
       [catererId]
     );
 
-    const [data2, field2] = await db.execute(
+    const [categories] = await db.execute(
       `SELECT 
-          categories.id, 
-          categories.name 
+      categories.id, 
+      categories.name 
       FROM categories
       WHERE categories.user_id = ?`,
       [catererId]
     );
 
     const newData = {
-      ...data[0],
-      rating: parseFloat(data[0].rating),
-      food_types: data2,
+      ...catererDetails[0],
+      rating: parseFloat(catererDetails[0].rating),
+      food_types: categories,
     };
 
     console.log(newData);
@@ -96,14 +102,12 @@ export const getSingleCaterer = async (req, res, next) => {
   }
 };
 
-
 export const getAllSubCategory = async (req, res, next) => {
   const categoryId = req.params.categoryId;
   // console.log(categoryId)
 
   try {
-    
-    const [data, field] = await db.execute(
+    const [subCategories] = await db.execute(
       `SELECT sub_categories.id AS sub_category_id,
           sub_categories.name AS sub_category_name,
           COUNT(products.id) AS product_count
@@ -113,24 +117,63 @@ export const getAllSubCategory = async (req, res, next) => {
       WHERE 
           sub_categories.category_id = ?
       GROUP BY 
-          sub_categories.id, sub_categories.name`, [categoryId]
-    )
+          sub_categories.id, sub_categories.name`,
+      [categoryId]
+    );
 
-    console.log(data);
+    // console.log(subCategories);
 
     res.status(200).json({
       success: true,
-      data: data,
+      data: subCategories,
       message: "Successfully retrieved caterer's data",
     });
-    
   } catch (error) {
-    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to retrieve sub-categories.",
+    });
   }
-}
+};
 
-
-export const getAllProducts = async (req,res,next)=>{
+export const getAllProducts = async (req, res, next) => {
   const subCategoryId = req.params.subCategoryId;
-  console.log(subCategoryId)
-}
+  console.log(subCategoryId);
+
+  try {
+    const [products] = await db.execute(
+      `SELECT id, food_name, food_description
+      FROM products
+      WHERE sub_category_id = ?`,
+      [subCategoryId]
+    );
+
+    const productsWithPrices = [];
+
+    for (let product of products) {
+      const [prices] = await db.execute(
+        `SELECT id, size, price
+        FROM prices
+        WHERE product_id = ?;`,
+        [product.id]
+      );
+
+      productsWithPrices.push({ ...product, prices: [...prices] });
+    }
+
+    console.log(JSON.stringify(productsWithPrices, null, 2));
+
+    res.status(200).json({
+      success: true,
+      data: productsWithPrices,
+      message: "Successfully retrieved product with prices.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to retrieve products.",
+    });
+  }
+};
