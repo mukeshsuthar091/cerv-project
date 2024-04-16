@@ -171,7 +171,8 @@ export const register = async (req, res, next) => {
       req.files.image[0].path) ||
     null;
 
-    console.log(req.files);
+    console.log("file:", req.file);
+    console.log("body: ",req.body);
   let userId;
 
   try {
