@@ -71,6 +71,7 @@ export const getSingleCaterer = async (req, res, next) => {
       [catererId]
     );
 
+
     const [categories] = await db.execute(
       `SELECT 
       categories.id, 

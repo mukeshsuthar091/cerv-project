@@ -80,8 +80,6 @@ export const getProfileData = async (req, res, next) => {
   }
 };
 
-
-
 // --------- edit profile details -----------
 
 export const editProfileData = async (req, res, next) => {
@@ -232,7 +230,6 @@ export const editProfileData = async (req, res, next) => {
 
       await db.execute(sql, values);
 
-
       // finding images to update
       const [data, field] = await db.execute(
         `SELECT image, business_license_image, driver_license_image 
@@ -267,7 +264,9 @@ export const editProfileData = async (req, res, next) => {
       }
 
       if (business_license_image_path != null) {
-        const bl_publicId = await extractPublicID(data[0].business_license_image || "");
+        const bl_publicId = await extractPublicID(
+          data[0].business_license_image || ""
+        );
 
         // image deleting from cloudinary
         const result = await cloudinary.api
@@ -293,7 +292,9 @@ export const editProfileData = async (req, res, next) => {
       }
 
       if (driver_license_image_path != null) {
-        const dl_publicId = await extractPublicID(data[0].driver_license_image || "");
+        const dl_publicId = await extractPublicID(
+          data[0].driver_license_image || ""
+        );
 
         // image deleting from cloudinary
         const result = await cloudinary.api
@@ -462,3 +463,137 @@ export const deleteAddress = async (req, res, next) => {
     });
   }
 };
+
+// --------------------- Favorite caterer -----------------------
+
+export const getFavoriteCaterers = async (req, res, next) => {
+  const userId = req.user.id;
+
+  try {
+    const [favoriteCaterer] = await db.execute(
+      `SELECT
+          users.id,
+          users.name,
+          users.image,
+          COALESCE(ROUND(avg(ratings.rating_value), 1), 0) AS rating,
+          userDetails.address
+      FROM
+          users
+      INNER JOIN 
+          favorites on users.id = favorites.caterer_id
+      LEFT JOIN 
+          userDetails on users.id = userDetails.user_id
+      LEFT JOIN
+          ratings ON users.id = ratings.user_id
+      WHERE
+          favorites.user_id = ?
+      GROUP BY
+          users.id`,
+      [userId]
+    );
+
+    if (favoriteCaterer.length > 0) {
+      res.status(200).json({
+        success: true,
+        message: "Successfully retrieved user's addresses",
+        data: favoriteCaterer,
+      });
+    } else {
+      res.status(404).json({
+        success: true,
+        data: favoriteCaterer,
+        message: "User has no favorite caterer.",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to retrieve user's favorite caterer.",
+    });
+  }
+};
+
+// ---------- add Favorite caterer -----------
+
+export const addFavoriteCaterer = async (req, res, next) => {
+  // const { id, email, role } = req.user;
+  const userId = req.user.id;
+  const catererId = req.body.catererId;
+
+  // console.log(req.user, catererId)
+
+  try {
+    if (!catererId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide catererId required.",
+      });
+    }
+
+    const [existingFavorite] = await db.execute(
+      "SELECT * FROM favorites WHERE user_id = ? AND caterer_id = ?",
+      [userId, catererId]
+    );
+
+    if (existingFavorite.length) {
+      return res.status(409).json({
+        success: false,
+        message: "Caterer is already in the favorites list.",
+      });
+    }
+
+    const [favoriteCaterer] = await db.execute(
+      `INSERT INTO favorites(user_id, caterer_id) VALUES (?, ?)`,
+      [userId, catererId]
+    );
+
+    console.log(favoriteCaterer);
+
+    res.status(200).json({
+      success: true,
+      message: "Favorite caterer added successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to delete address, Try again.",
+    });
+  }
+};
+
+// ---------- remove Favorite caterer -----------
+
+export const removeFavoriteCaterer = async (req, res, next) => {
+  const userId = req.user.id;
+  const favoriteId = req.params.favoriteId;
+
+  try {
+    // Remove the caterer from the favorites list
+    const [result] = await db.execute(
+      "DELETE FROM favorites WHERE id = ? AND user_id = ?",
+      [favoriteId, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Favorite caterer not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Favorite caterer removed successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to remove favorite caterer.",
+      error: error.message,
+    });
+  }
+};
+
+

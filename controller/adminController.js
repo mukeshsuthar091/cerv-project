@@ -46,6 +46,8 @@ export const createCategory = async (req, res, next) => {
   const category_name = req.body.name;
   const category_img_path = (req.file && req.file.path) || null;
 
+  // console.log(req.file, req.file.path);
+  
   try {
     if (!category_name) {
       return res.status(400).json({

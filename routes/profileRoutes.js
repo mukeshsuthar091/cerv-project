@@ -9,6 +9,9 @@ import {
   setAddress,
   deleteAddress,
   editAddress,
+  getFavoriteCaterers,
+  addFavoriteCaterer,
+  removeFavoriteCaterer,
 } from "../controller/userProfileController.js";
 
 const router = express.Router();
@@ -33,5 +36,12 @@ router.post("/addresses", verifyToken, setAddress);
 router.put("/addresses/:addressId", verifyToken, editAddress);
 
 router.delete("/addresses/:addressId", verifyToken, deleteAddress);
+
+
+router.get('/favorites', verifyToken, getFavoriteCaterers);
+
+router.post('/favorites', verifyToken, addFavoriteCaterer);
+
+router.delete('/favorites/:favoriteId', verifyToken, removeFavoriteCaterer);
 
 export default router;
