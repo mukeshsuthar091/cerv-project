@@ -40,6 +40,8 @@ export const verifyToken = (req, res, next) => {
   // Extract the token from the Authorization header
   const token = authHeader.split(" ")[1];
 
+  console.log("token: ", token);
+
   // Verify the token
   jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
     if (err) {

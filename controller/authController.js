@@ -338,7 +338,6 @@ export const register = async (req, res, next) => {
         const [img_url = "", bl_img_url = "", dl_img_url = ""] =
           imageResult ?? [];
 
-
         await db.execute("UPDATE users SET image = ? WHERE id = ?", [
           img_url,
           userId,
@@ -415,11 +414,11 @@ export const login = async (req, res, next) => {
       { expiresIn: "1d" }
     );
 
-  console.log("JWS token: ", token);
-
+    console.log("JWS token: ", token);
 
     // Set the token in the HTTP response header
     res.setHeader("Authorization", `Bearer ${token}`);
+
 
     res.status(200).json({
       success: true,
