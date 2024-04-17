@@ -87,13 +87,20 @@ export const editProfileData = async (req, res, next) => {
   const userEmail = req.user.email;
   const role = req.user.role;
   const { name, email, country_code, phone_no, address } = req.body;
-  const image_path =
-    (req.files &&
-      req.files.image &&
-      req.files.image[0] &&
-      req.files.image[0].path) ||
-    null;
+  // const image_path =
+  //   (req.files &&
+  //     req.files.image &&
+  //     req.files.image[0] &&
+  //     req.files.image[0].path) ||
+  //   null;
+  let image_path = null;
+  if (req.files && req.files.image) {
+    image_path = req.files.image[0].path;
+  }
   // console.log(req.files);
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
+
   try {
     if (userEmail !== email) {
       const [user, field] = await db.execute(
@@ -160,7 +167,8 @@ export const editProfileData = async (req, res, next) => {
 
         imageResult = await uploader(image_path);
         const [image_url = ""] = imageResult ?? [];
-        // console.log("image_url: ", image_url);
+
+        console.log("image_url: ", image_url);
 
         if (image_url) {
           await db.execute("UPDATE users SET image = ? WHERE id = ?", [
@@ -185,18 +193,28 @@ export const editProfileData = async (req, res, next) => {
         driverLicenseNumber,
       } = req.body;
 
-      const business_license_image_path =
-        (req.files &&
-          req.files.businessLicenseImage &&
-          req.files.businessLicenseImage[0] &&
-          req.files.businessLicenseImage[0].path) ||
-        null;
-      const driver_license_image_path =
-        (req.files &&
-          req.files.driverLicenseImage &&
-          req.files.driverLicenseImage[0] &&
-          req.files.driverLicenseImage[0].path) ||
-        null;
+      // const business_license_image_path =
+      //   (req.files &&
+      //     req.files.businessLicenseImage &&
+      //     req.files.businessLicenseImage[0] &&
+      //     req.files.businessLicenseImage[0].path) ||
+      //   null;
+      // const driver_license_image_path =
+      //   (req.files &&
+      //     req.files.driverLicenseImage &&
+      //     req.files.driverLicenseImage[0] &&
+      //     req.files.driverLicenseImage[0].path) ||
+      //   null;
+
+      let business_license_image_path = null;
+      if (req.files && req.files.businessLicenseImage) {
+        business_license_image_path = req.files.businessLicenseImage[0].path;
+      }
+
+      let driver_license_image_path = null;
+      if (req.files && req.files.driverLicenseImage) {
+        driver_license_image_path = req.files.driverLicenseImage[0].path;
+      }
 
       // updating user data (caterer)
       await db.execute(sql, values);
@@ -256,11 +274,15 @@ export const editProfileData = async (req, res, next) => {
 
         imageResult = await uploader(image_path);
         const [image_url = ""] = imageResult ?? [];
+        
+        console.log("image_url: ", image_url);
 
         await db.execute("UPDATE users SET image = ? WHERE id = ?", [
           image_url,
           userId,
         ]);
+
+        
       }
 
       if (business_license_image_path != null) {
@@ -280,6 +302,8 @@ export const editProfileData = async (req, res, next) => {
 
         imageResult = await uploader(business_license_image_path);
         const [bl_img_url = ""] = imageResult ?? [];
+
+        console.log("bl_img_url: ", bl_img_url);
 
         await db.execute(
           `UPDATE userDetails
@@ -308,6 +332,8 @@ export const editProfileData = async (req, res, next) => {
 
         imageResult = await uploader(driver_license_image_path);
         const [dl_img_url = ""] = imageResult ?? [];
+
+        console.log("dl_img_url: ", dl_img_url);
 
         await db.execute(
           `UPDATE userDetails
@@ -377,7 +403,8 @@ export const setAddress = async (req, res, next) => {
   const userEmail = req.user.email;
   const role = req.user.role;
   const { label, address } = req.body;
-  console.log(label, address, userEmail, role);
+
+  console.log("body:", req.body);
 
   try {
     // here's a validation code +++++++++
@@ -416,6 +443,8 @@ export const editAddress = async (req, res, next) => {
   const addressId = req.params.addressId;
   const { label, address } = req.body;
   // city, state, postal_code, country will be add later
+  console.log("body:", req.body);
+
 
   try {
     await db.execute(
@@ -522,6 +551,8 @@ export const addFavoriteCaterer = async (req, res, next) => {
   const catererId = req.body.catererId;
 
   // console.log(req.user, catererId)
+  console.log("body:", req.body);
+
 
   try {
     if (!catererId) {

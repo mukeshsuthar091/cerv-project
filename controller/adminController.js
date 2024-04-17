@@ -44,10 +44,16 @@ export const getAllCategories = async (req, res, next) => {
 export const createCategory = async (req, res, next) => {
   const userId = req.user.id;
   const category_name = req.body.name;
-  const category_img_path = (req.file && req.file.path) || null;
+  // const category_img_path = (req.file && req.file.path) || null;
 
+  let category_img_path = null;
+  if(req.file && req.file.path){
+    category_img_path = req.file.path;
+  }
   // console.log(req.file, req.file.path);
-  
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
+
   try {
     if (!category_name) {
       return res.status(400).json({
@@ -66,6 +72,9 @@ export const createCategory = async (req, res, next) => {
     if (category_id && category_img_path) {
       let imageResult = await uploader(category_img_path);
       const [category_img_url = ""] = imageResult ?? [];
+
+      console.log("category_img_url: ", category_img_url)
+
 
       if (category_img_url) {
         await db.execute("UPDATE categories SET image = ? WHERE id = ?", [
@@ -94,7 +103,15 @@ export const updateCategory = async (req, res, next) => {
   const userId = req.user.id;
   const categoryId = req.params.categoryId;
   const category_name = req.body.name;
-  const category_img_path = (req.file && req.file.path) || null;
+  // const category_img_path = (req.file && req.file.path) || null;
+
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
+
+  let category_img_path = null;
+  if(req.file && req.file.path){
+    category_img_path = req.file.path;
+  }
 
   // console.log(userId, categoryId, category_name);
   try {
@@ -121,11 +138,13 @@ export const updateCategory = async (req, res, next) => {
       });
 
       // updating new image
-      const [image_url = ""] = (await uploader(category_img_path)) ?? [];
+      const [category_img_url = ""] = (await uploader(category_img_path)) ?? [];
 
-      if (image_url) {
+      console.log("category_img_url: ", category_img_url)
+
+      if (category_img_url) {
         await db.execute("UPDATE categories SET image = ? WHERE id = ?", [
-          image_url,
+          category_img_url,
           categoryId,
         ]);
       }
@@ -207,7 +226,14 @@ export const createSubCategory = async (req, res, next) => {
   const userId = req.user.id;
   const categoryId = req.params.categoryId;
   const subCategory_name = req.body.name;
-  const subCategory_img_path = (req.file && req.file.path) || null;
+  // const subCategory_img_path = (req.file && req.file.path) || null;
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
+
+  let subCategory_img_path = null;
+  if(req.file && req.file.path){
+    subCategory_img_path = req.file.path;
+  }
 
   try {
     if (!subCategory_name) {
@@ -225,6 +251,9 @@ export const createSubCategory = async (req, res, next) => {
     if (subCategory_id && subCategory_img_path) {
       let imageResult = await uploader(subCategory_img_path);
       const [subCategory_img_url = ""] = imageResult ?? [];
+
+      console.log("subCategory_img_url: ", subCategory_img_url);
+
 
       if (subCategory_img_url) {
         await db.execute("UPDATE sub_categories SET image = ? WHERE id = ?", [
@@ -253,9 +282,17 @@ export const updateSubCategory = async (req, res, next) => {
   const userId = req.user.id;
   const subCategoryId = req.params.subCategoryId;
   const subCategory_name = req.body.name;
-  const subCategory_img_path = (req.file && req.file.path) || null;
+  // const subCategory_img_path = (req.file && req.file.path) || null;
+  let subCategory_img_path = null;
+  if(req.file && req.file.path){
+    subCategory_img_path = req.file.path;
+  }
 
-  console.log(userId, subCategoryId, subCategory_name);
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
+
+
+  // console.log(userId, subCategoryId, subCategory_name);
   try {
     await db.execute(
       `UPDATE sub_categories
@@ -280,12 +317,13 @@ export const updateSubCategory = async (req, res, next) => {
       });
 
       // updating new image
-      const [image_url = ""] = (await uploader(subCategory_img_path)) ?? [];
-      // console.log(image_url);
+      const [subCategory_img_url = ""] = (await uploader(subCategory_img_path)) ?? [];
+      
+      console.log("subCategory_img_url: ", subCategory_img_url);
 
-      if (image_url) {
+      if (subCategory_img_url) {
         await db.execute("UPDATE sub_categories SET image = ? WHERE id = ?", [
-          image_url,
+          subCategory_img_url,
           subCategoryId,
         ]);
       }
@@ -356,7 +394,14 @@ export const createProduct = async (req, res, next) => {
   const subCategoryId = req.params.subCategoryId;
   const { name, description } = req.body;
   const prices = req.body.prices;
-  const product_img_path = (req.file && req.file.path) || null;
+  // const product_img_path = (req.file && req.file.path) || null;
+  let product_img_path = null;
+  if(req.file && req.file.path){
+    product_img_path = req.file.path;
+  }
+
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
 
   try {
     // console.log(userId, categoryId, subCategoryId, name, description, product_img_path, prices);
@@ -378,6 +423,8 @@ export const createProduct = async (req, res, next) => {
     if (product_id && product_img_path) {
       let imageResult = await uploader(product_img_path);
       const [product_img_url = ""] = imageResult ?? [];
+
+      console.log("product_img_url: ", product_img_url)
 
       if (product_img_url) {
         await db.execute("UPDATE products SET image = ? WHERE id = ?", [
@@ -521,10 +568,17 @@ export const updateProduct = async (req, res, next) => {
   const userId = req.user.id;
   const categoryId = req.params.categoryId;
   const subCategoryId = req.params.subCategoryId;
+  const productId = req.params.productId;
   const { name, description } = req.body;
   const prices = req.body.prices;
-  const product_img_path = (req.file && req.file.path) || null;
-  const productId = req.params.productId;
+  // const product_img_path = (req.file && req.file.path) || null;
+  let product_img_path = null;
+  if(req.file && req.file.path){
+    product_img_path = req.file.path;
+  }
+
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
 
   try {
     // console.log(userId, categoryId, subCategoryId, name, description, product_img_path, prices);
@@ -564,12 +618,13 @@ export const updateProduct = async (req, res, next) => {
       });
 
       // updating new image
-      const [image_url = ""] = (await uploader(product_img_path)) ?? [];
-      // console.log(image_url);
+      const [product_img_url = ""] = (await uploader(product_img_path)) ?? [];
+      
+      console.log("product_img_url: ", product_img_url);
 
-      if (image_url) {
+      if (product_img_url) {
         await db.execute("UPDATE products SET image = ? WHERE id = ?", [
-          image_url,
+          product_img_url,
           productId,
         ]);
       }

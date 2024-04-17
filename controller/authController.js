@@ -176,9 +176,10 @@ export const register = async (req, res, next) => {
     image_path = req.files.image[0].path;
   }
 
-    // console.log("file: ", req.file);
-    console.log("files: ", req.files);
-    console.log("body: ",req.body);
+  // console.log("file: ", req.file);
+  console.log("files: ", req.files);
+  console.log("body: ", req.body);
+
   let userId;
 
   try {
@@ -220,7 +221,8 @@ export const register = async (req, res, next) => {
       if (userId && image_path) {
         let imageResult = await uploader(image_path);
         const [image_url = ""] = imageResult ?? [];
-        // console.log("image_url: ", image_url);
+
+        console.log("image_url: ", image_url);
 
         if (image_url) {
           await db.execute("UPDATE users SET image = ? WHERE id = ?", [
@@ -250,18 +252,28 @@ export const register = async (req, res, next) => {
         driverLicenseNumber,
       } = req.body;
 
-      const business_license_image_path =
-        (req.files &&
-          req.files.businessLicenseImage &&
-          req.files.businessLicenseImage[0] &&
-          req.files.businessLicenseImage[0].path) ||
-        null;
-      const driver_license_image_path =
-        (req.files &&
-          req.files.driverLicenseImage &&
-          req.files.driverLicenseImage[0] &&
-          req.files.driverLicenseImage[0].path) ||
-        null;
+      // const business_license_image_path =
+      //   (req.files &&
+      //     req.files.businessLicenseImage &&
+      //     req.files.businessLicenseImage[0] &&
+      //     req.files.businessLicenseImage[0].path) ||
+      //   null;
+      // const driver_license_image_path =
+      //   (req.files &&
+      //     req.files.driverLicenseImage &&
+      //     req.files.driverLicenseImage[0] &&
+      //     req.files.driverLicenseImage[0].path) ||
+      //   null;
+
+      let business_license_image_path = null;
+      if (req.files && req.files.businessLicenseImage) {
+        business_license_image_path = req.files.businessLicenseImage[0].path;
+      }
+
+      let driver_license_image_path = null;
+      if (req.files && req.files.driverLicenseImage) {
+        driver_license_image_path = req.files.driverLicenseImage[0].path;
+      }
 
       if (
         !name ||
@@ -312,7 +324,7 @@ export const register = async (req, res, next) => {
       const [user_detail_id] = await db.execute(sql, values);
       let userDetailsId = user_detail_id.insertId;
 
-      console.log("userDetailsId", userDetailsId);
+      // console.log("userDetailsId", userDetailsId);
 
       if (userId && business_license_image_path && driver_license_image_path) {
         // image storing into cloudinary
@@ -322,8 +334,10 @@ export const register = async (req, res, next) => {
           driver_license_image_path
         );
         // console.log("imageResult", imageResult);
+
         const [img_url = "", bl_img_url = "", dl_img_url = ""] =
           imageResult ?? [];
+
 
         await db.execute("UPDATE users SET image = ? WHERE id = ?", [
           img_url,
@@ -362,6 +376,9 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   const userEmail = req.body.email;
   const userPassword = req.body.password;
+
+  console.log("login data: ", req.body);
+
   try {
     await userLoginValidation.validateAsync(req.body);
 
@@ -398,17 +415,18 @@ export const login = async (req, res, next) => {
       { expiresIn: "1d" }
     );
 
+  console.log("JWS token: ", token);
+
+
     // Set the token in the HTTP response header
     res.setHeader("Authorization", `Bearer ${token}`);
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Login successful",
-        token,
-        data: {id, email, role, ...rest },
-      });
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      data: { id, email, role, ...rest },
+    });
 
     // res
     //   .cookie("accessToken", token, {
@@ -447,7 +465,8 @@ export const changePassword = async (req, res, next) => {
   const oldPassword = req.body.oldPassword;
   const newPassword = req.body.newPassword;
 
-  // console.log(user);
+  console.log("password: ", req.body);
+
   try {
     await userChangePasswordValidation.validateAsync(req.body);
 
@@ -465,6 +484,7 @@ export const changePassword = async (req, res, next) => {
 
     const isEqual = await bcrypt.compare(oldPassword, row[0].password);
     console.log(isEqual);
+
     if (!isEqual) {
       return res.status(401).json({
         success: false,
@@ -630,6 +650,8 @@ export const resetPassword = async (req, res, next) => {
   const password = req.body.password;
   const email = req.body.email;
   const userId = req.body.userId;
+
+  console.log("body: ", req.body);
 
   try {
     const salt = bcrypt.genSaltSync(10);
