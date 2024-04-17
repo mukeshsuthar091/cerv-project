@@ -13,6 +13,7 @@ import authRoute from "./routes/authRoutes.js";
 import profileRoute from "./routes/profileRoutes.js";
 import userRoute from "./routes/userRoutes.js";
 import adminRoute from "./routes/adminRoutes.js";
+import searchRoute from "./routes/searchRoutes.js";
 
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/profile", profileRoute);
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/admin", adminRoute);
+app.use("/api/v1/search", searchRoute);
 
 
 

@@ -27,6 +27,9 @@ export const verifyToken = (req, res, next) => {
   // Retrieve the Authorization header
   const authHeader = req.headers.authorization;
   // Check if the Authorization header is present and starts with 'Bearer '
+
+  console.log("headers: ", req.headers);
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
       success: false,
