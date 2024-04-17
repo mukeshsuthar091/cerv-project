@@ -164,14 +164,19 @@ export const verify_OTP = async (req, res, next) => {
 export const register = async (req, res, next) => {
   const { name, email, password, country_code, phone_no } = req.body;
   const role = parseInt(req.body.role);
-  const image_path =
-    (req.files &&
-      req.files.image &&
-      req.files.image[0] &&
-      req.files.image[0].path) ||
-    null;
+  // const image_path =
+  //   (req.files &&
+  //     req.files.image &&
+  //     req.files.image[0] &&
+  //     req.files.image[0].path) ||
+  //   null;
 
-    console.log("file: ", req.file);
+  let image_path = null;
+  if (req.files && req.files.image) {
+    image_path = req.files.image[0].path;
+  }
+
+    // console.log("file: ", req.file);
     console.log("files: ", req.files);
     console.log("body: ",req.body);
   let userId;
