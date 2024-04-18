@@ -1,6 +1,6 @@
 import express from "express";
 
-import { verifyToken } from "../utils/verifyToken.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 import upload from "../middleware/multer.js";
 import {
   getProfileData,

@@ -13,7 +13,7 @@ import {
   send_OTP,
   verify_OTP,
 } from "../controller/authController.js";
-import { verifyToken } from "../utils/verifyToken.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 import upload from "../middleware/multer.js";
 
 const router = express.Router();

@@ -1,6 +1,6 @@
 import express from "express";
 
-import { verifyToken } from "../utils/verifyToken.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 import { getAllCaterer, getAllProducts, getAllSubCategory, getSingleCaterer } from "../controller/userController.js";
 
 const router = express.Router();

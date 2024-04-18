@@ -22,6 +22,7 @@ import {
   userResetPasswordValidation,
   verifyOTPValidation,
 } from "../validation/authValidation.js";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../helpers/jwt_helper.js";
 
 dotenv.config();
 
@@ -43,23 +44,23 @@ export const send_OTP = async (req, res, next) => {
     await sendOtpValidation.validateAsync(req.body);
 
     // ------- OTP send Code -------
-    // const response = await sendOTP(
-    //   req.body.country_code + req.body.phone_no.toString(),
-    //   "",
-    //   "SMS",
-    //   "",
-    //   "",
-    //   600,
-    //   4,
-    //   process.env.OTPLESS_API_KEY,
-    //   process.env.OTPLESS_API_SECRET
-    // );
+    const response = await sendOTP(
+      req.body.country_code + req.body.phone_no.toString(),
+      "",
+      "SMS",
+      "",
+      "",
+      180,   // 180sec = 3min
+      4,
+      process.env.OTPLESS_API_KEY,
+      process.env.OTPLESS_API_SECRET
+    );
     // const response = await sendOTP(phoneNumber, email, channel, hash, orderId, expiry, otpLength, clientId, clientSecret)
 
     // console.log(response);
 
     res.status(200).json({
-      orderId: "abcxzy", // response.orderId
+      orderId: response.orderId, // response.orderId
       message: "OTP send successfully",
     });
   } catch (error) {
@@ -84,16 +85,21 @@ export const resend_OTP = async (req, res, next) => {
     await resendOTPValidation.validateAsync(req.body);
 
     // ------ OTP resend code ------
-    // const response = await resendOTP(
-    //   req.body.orderId,
-    //   process.env.OTPLESS_API_KEY,
-    //   process.env.OTPLESS_API_SECRET
-    // );
+    const response = await resendOTP(
+      req.body.orderId,
+      process.env.OTPLESS_API_KEY,
+      process.env.OTPLESS_API_SECRET
+    );
 
-    // console.log(response);
+    console.log(response);
+    
+    if(!response.orderId){
+      throw new Error("OTP can't resent within 1 min.");
+    }
+
 
     res.status(200).json({
-      orderId: "abcxzy", // response.orderId
+      orderId: response.orderId,
       message: "OTP resend successfully",
     });
   } catch (error) {
@@ -120,18 +126,19 @@ export const verify_OTP = async (req, res, next) => {
     const { otp, orderId, country_code, phone_no } = req.body;
 
     // ------- OTP verify Code --------
-    // const response = await verifyOTP(
-    //   "",
-    //   country_code + phone_no.toString(),
-    //   orderId,
-    //   otp,
-    //   process.env.OTPLESS_API_KEY,
-    //   process.env.OTPLESS_API_SECRET
-    // );
-    // console.log("response:", response);
+    const response = await verifyOTP(
+      "",
+      country_code + phone_no.toString(),
+      orderId,
+      otp,
+      process.env.OTPLESS_API_KEY,
+      process.env.OTPLESS_API_SECRET
+    );
+    console.log("response:", response);
 
-    if (otp === 1234) {
-      // response.isOTPVerified
+    // if (otp === 1234) {
+    if (response.isOTPVerified) {
+    // response.isOTPVerified
       res.status(200).json({
         success: true,
         isVerify: true,
@@ -406,9 +413,9 @@ export const login = async (req, res, next) => {
       });
     }
 
-    const { id, email, password, role, ...rest } = user[0];
+    // const { id, email, password, role, ...rest } = user[0];
+    const userData = user[0];
 
-    
     // ------------------------------------------------- old code -----------------------------
     
     // const token = jwt.sign(
@@ -431,19 +438,8 @@ export const login = async (req, res, next) => {
 
     // ------------------------------------------------- new code -----------------------------
 
-    // Create a access token
-    const accessToken = jwt.sign(
-      { id: id, email: email, role: role },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    // Create a refresh token
-    const refreshToken = jwt.sign(
-      { id: id, email: email, role: role },
-      process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: "1y" }
-    );
+    const accessToken = await signAccessToken(userData);
+    const refreshToken = await signRefreshToken(userData);
 
     console.log("JWS access token: ", accessToken);
     console.log("JWS refresh token: ", refreshToken);
@@ -458,24 +454,9 @@ export const login = async (req, res, next) => {
       message: "Login successful",
       accessToken,
       refreshToken,
-      data: { id, email, role, ...rest },
+      data: userData,
     });
 
-    // res
-    //   .cookie("accessToken", token, {
-    //     httpOnly: true,
-    //     expires: token.expiresIn,
-    //   })
-    //   .status(200)
-    //   .json({
-    //     success: true,
-    //     message: "Login successful",
-    //     token,
-    //     // id,
-    //     // email,
-    //     data: {id, email, role, ...rest },
-    //     // role,
-    //   });
   } catch (error) {
     if (error instanceof ValidationError) {
       return res.status(400).json({
@@ -493,9 +474,45 @@ export const login = async (req, res, next) => {
 
 // ---------------- refresh token ------------------
 export const getNewAccessToken = async (req, res, next)=>{
-  const  refreshToken = req.body.refreshToken;
   
-  console.log("refreshToken: ", refreshToken);
+  try {
+    const  oldRefreshToken = req.body.refreshToken;
+    console.log("refreshToken: ", oldRefreshToken);
+    
+    if (!oldRefreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "You are not authorized",
+      });
+    }
+
+    const user = await verifyRefreshToken(oldRefreshToken);
+    console.log("userData: ", user);
+
+    const newAccessToken = await signAccessToken(user);
+    const newRefreshToken = await signRefreshToken(user);
+
+    console.log("JWS access token: ", newAccessToken);
+    console.log("JWS refresh token: ", newRefreshToken);
+
+    // Set the token in the HTTP response header
+    res.setHeader("x-access-token", newAccessToken);
+    res.setHeader("x-refresh-token", newRefreshToken);
+
+    res.status(200).json({
+      success: true,
+      message: "Token Refresh Successfully.",
+      newAccessToken,
+      newRefreshToken,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed, Try again.",
+    });
+  }
 }
 
 
