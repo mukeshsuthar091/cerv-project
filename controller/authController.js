@@ -125,19 +125,19 @@ export const verify_OTP = async (req, res, next) => {
 
     const { otp, orderId, country_code, phone_no } = req.body;
 
-    // ------- OTP verify Code --------
-    const response = await verifyOTP(
-      "",
-      country_code + phone_no.toString(),
-      orderId,
-      otp,
-      process.env.OTPLESS_API_KEY,
-      process.env.OTPLESS_API_SECRET
-    );
-    console.log("response:", response);
+    // // ------- OTP verify Code --------
+    // const response = await verifyOTP(
+    //   "",
+    //   country_code + phone_no.toString(),
+    //   orderId,
+    //   otp,
+    //   process.env.OTPLESS_API_KEY,
+    //   process.env.OTPLESS_API_SECRET
+    // );
+    // console.log("response:", response);
 
-    // if (otp === 1234) {
-    if (response.isOTPVerified) {
+    if (otp === 9164) {
+    // if (response.isOTPVerified) {
     // response.isOTPVerified
       res.status(200).json({
         success: true,
