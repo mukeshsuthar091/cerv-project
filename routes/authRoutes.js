@@ -3,7 +3,9 @@ import express from "express";
 import {
   changePassword,
   forgotPassword,
+  getNewAccessToken,
   login,
+  logout,
   register,
   resend_OTP,
   resetPassword,
@@ -33,6 +35,10 @@ router.post(
 );
 
 router.post("/login", login);
+
+router.post("/logout", verifyToken, logout);
+
+router.post("/refresh-token", getNewAccessToken);
 
 router.put("/change-password", verifyToken, changePassword);
 

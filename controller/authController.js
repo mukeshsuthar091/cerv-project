@@ -408,22 +408,56 @@ export const login = async (req, res, next) => {
 
     const { id, email, password, role, ...rest } = user[0];
 
-    const token = jwt.sign(
+    
+    // ------------------------------------------------- old code -----------------------------
+    
+    // const token = jwt.sign(
+    //   { id: id, email: email, role: role },
+    //   process.env.JWT_SECRET_KEY,
+    //   { expiresIn: "1d" }
+    // );
+
+    // console.log("JWS token: ", token);
+
+    // // Set the token in the HTTP response header
+    // res.setHeader("Authorization", `Bearer ${token}`);
+
+    // res.status(200).json({
+    //   success: true,
+    //   message: "Login successful",
+    //   token,
+    //   data: { id, email, role, ...rest },
+    // });
+
+    // ------------------------------------------------- new code -----------------------------
+
+    // Create a access token
+    const accessToken = jwt.sign(
       { id: id, email: email, role: role },
-      process.env.JWT_SECRET_KEY,
+      process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "1d" }
     );
 
-    console.log("JWS token: ", token);
+    // Create a refresh token
+    const refreshToken = jwt.sign(
+      { id: id, email: email, role: role },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "1y" }
+    );
+
+    console.log("JWS access token: ", accessToken);
+    console.log("JWS refresh token: ", refreshToken);
 
     // Set the token in the HTTP response header
-    res.setHeader("Authorization", `Bearer ${token}`);
-
+    // res.setHeader("Authorization", `Bearer ${access_token}`);
+    res.setHeader("x-access-token", accessToken);
+    res.setHeader("x-refresh-token", refreshToken);
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      token,
+      accessToken,
+      refreshToken,
       data: { id, email, role, ...rest },
     });
 
@@ -453,6 +487,35 @@ export const login = async (req, res, next) => {
       success: false,
       error: error.message,
       message: "Failed to login",
+    });
+  }
+};
+
+// ---------------- refresh token ------------------
+export const getNewAccessToken = async (req, res, next)=>{
+  const  refreshToken = req.body.refreshToken;
+  
+  console.log("refreshToken: ", refreshToken);
+}
+
+
+// ---------------- logout API ------------------
+
+export const logout = async (req, res) => {
+  try {
+    // However, you may consider adding any other necessary cleanup operations here.
+
+    // Send a success response to indicate the user has been logged out.
+    res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (error) {
+    // Handle any errors that may occur
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Failed to logout",
     });
   }
 };
