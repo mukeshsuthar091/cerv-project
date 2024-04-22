@@ -21,7 +21,6 @@ const fileFilter = (req, file, cb) => {
   ) {
     cb(null, true);
   } else {
-    // prevent the upload
     cb({ message: "Unsupported file format" }, false);
   }
 };

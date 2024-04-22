@@ -8,11 +8,9 @@ import extractPublicID from "../uploads/extract_Public_ID.js";
 
 //  ----------------------
 
-//  --------------- categories -----------------
 
 export const getAllCategories = async (req, res, next) => {
   const userId = req.user.id;
-  // console.log(req.user);
 
   try {
     const [categories] = await db.execute(
@@ -39,18 +37,16 @@ export const getAllCategories = async (req, res, next) => {
   }
 };
 
-//  -------- create category ---------
+
 
 export const createCategory = async (req, res, next) => {
   const userId = req.user.id;
   const category_name = req.body.name;
-  // const category_img_path = (req.file && req.file.path) || null;
 
   let category_img_path = null;
   if(req.file && req.file.path){
     category_img_path = req.file.path;
   }
-  // console.log(req.file, req.file.path);
   console.log("files: ", req.files);
   console.log("body: ", req.body);
 
@@ -67,7 +63,6 @@ export const createCategory = async (req, res, next) => {
       [userId, category_name]
     );
     const category_id = category.insertId;
-    // console.log(category_id);
 
     if (category_id && category_img_path) {
       let imageResult = await uploader(category_img_path);
@@ -97,13 +92,11 @@ export const createCategory = async (req, res, next) => {
   }
 };
 
-//  -------- update category ---------
 
 export const updateCategory = async (req, res, next) => {
   const userId = req.user.id;
   const categoryId = req.params.categoryId;
   const category_name = req.body.name;
-  // const category_img_path = (req.file && req.file.path) || null;
 
   console.log("files: ", req.files);
   console.log("body: ", req.body);
@@ -113,7 +106,6 @@ export const updateCategory = async (req, res, next) => {
     category_img_path = req.file.path;
   }
 
-  // console.log(userId, categoryId, category_name);
   try {
     await db.execute(
       `UPDATE categories
@@ -128,16 +120,13 @@ export const updateCategory = async (req, res, next) => {
         [categoryId]
       );
 
-      // extracting publicId of stored image
       const publicID = await extractPublicID(category[0].image || "");
 
-      // deleting old image stored in database
       const result = await cloudinary.api.delete_resources([publicID || ""], {
         type: "upload",
         resource_type: "image",
       });
 
-      // updating new image
       const [category_img_url = ""] = (await uploader(category_img_path)) ?? [];
 
       console.log("category_img_url: ", category_img_url)
@@ -163,7 +152,7 @@ export const updateCategory = async (req, res, next) => {
   }
 };
 
-//  -------- delete category ---------
+
 
 export const deleteCategory = async (req, res, next) => {
   const userId = req.user.id;
@@ -188,7 +177,6 @@ export const deleteCategory = async (req, res, next) => {
   }
 };
 
-//  --------------- sub categories -----------------
 
 export const getAllSubCategories = async (req, res, next) => {
   const userId = req.user.id;
@@ -220,13 +208,11 @@ export const getAllSubCategories = async (req, res, next) => {
   }
 };
 
-//  -------- create category ---------
 
 export const createSubCategory = async (req, res, next) => {
   const userId = req.user.id;
   const categoryId = req.params.categoryId;
   const subCategory_name = req.body.name;
-  // const subCategory_img_path = (req.file && req.file.path) || null;
   console.log("files: ", req.files);
   console.log("body: ", req.body);
 
@@ -276,13 +262,11 @@ export const createSubCategory = async (req, res, next) => {
   }
 };
 
-//  -------- update category ---------
 
 export const updateSubCategory = async (req, res, next) => {
   const userId = req.user.id;
   const subCategoryId = req.params.subCategoryId;
   const subCategory_name = req.body.name;
-  // const subCategory_img_path = (req.file && req.file.path) || null;
   let subCategory_img_path = null;
   if(req.file && req.file.path){
     subCategory_img_path = req.file.path;
@@ -292,7 +276,6 @@ export const updateSubCategory = async (req, res, next) => {
   console.log("body: ", req.body);
 
 
-  // console.log(userId, subCategoryId, subCategory_name);
   try {
     await db.execute(
       `UPDATE sub_categories
@@ -307,16 +290,13 @@ export const updateSubCategory = async (req, res, next) => {
         [subCategoryId]
       );
 
-      // extracting publicId of stored image
       const publicID = await extractPublicID(subCategory[0].image || "");
 
-      // deleting old image stored in database
       const result = await cloudinary.api.delete_resources([publicID || ""], {
         type: "upload",
         resource_type: "image",
       });
 
-      // updating new image
       const [subCategory_img_url = ""] = (await uploader(subCategory_img_path)) ?? [];
       
       console.log("subCategory_img_url: ", subCategory_img_url);
@@ -342,13 +322,11 @@ export const updateSubCategory = async (req, res, next) => {
   }
 };
 
-//  -------- delete category ---------
 
 export const deleteSubCategory = async (req, res, next) => {
   const userId = req.user.id;
   const subCategoryId = req.params.subCategoryId;
 
-  // console.log(subCategoryId, userId);
   try {
     // await db.beginTransaction();
 
@@ -384,9 +362,7 @@ export const deleteSubCategory = async (req, res, next) => {
   }
 };
 
-//  ------------------- admin products ----------------------
 
-//  -------- create products ---------
 
 export const createProduct = async (req, res, next) => {
   const userId = req.user.id;
@@ -394,7 +370,6 @@ export const createProduct = async (req, res, next) => {
   const subCategoryId = req.params.subCategoryId;
   const { name, description } = req.body;
   const prices = req.body.prices;
-  // const product_img_path = (req.file && req.file.path) || null;
   let product_img_path = null;
   if(req.file && req.file.path){
     product_img_path = req.file.path;
@@ -404,8 +379,6 @@ export const createProduct = async (req, res, next) => {
   console.log("body: ", req.body);
 
   try {
-    // console.log(userId, categoryId, subCategoryId, name, description, product_img_path, prices);
-    // console.log(prices)
     if (!name || !description || !prices) {
       return res.status(400).json({
         success: false,
@@ -440,7 +413,6 @@ export const createProduct = async (req, res, next) => {
     let price_arr_length = prices.length;
 
     for (let price of prices) {
-      // console.log(price.size, price.price);
       total_price += price.price;
       await db.execute(
         `INSERT INTO prices(product_id, size, price) VALUES (?, ?, ?)`,
@@ -454,7 +426,6 @@ export const createProduct = async (req, res, next) => {
       product_id,
     ]);
 
-    // calculating avg price of all products of users for cost per plat
     let [result] = await db.execute(
       `SELECT avg(prices.price) as avg_price
       FROM products
@@ -463,7 +434,6 @@ export const createProduct = async (req, res, next) => {
       [userId]
     );
 
-    // console.log(total_price, price_arr_length, avg_price);
 
     let costPerPlat = parseFloat(result[0].avg_price).toFixed(2);
     await db.execute(
@@ -484,7 +454,6 @@ export const createProduct = async (req, res, next) => {
   }
 };
 
-//  -------- get all products ---------
 
 export const getAllProducts = async (req, res, next) => {
   const categoryId = req.params.categoryId;
@@ -512,7 +481,6 @@ export const getAllProducts = async (req, res, next) => {
   }
 };
 
-//  -------- get single products ---------
 export const getSingleProduct = async (req, res, next) => {
   const userId = req.user.id;
   const categoryId = req.params.categoryId;
@@ -562,7 +530,6 @@ export const getSingleProduct = async (req, res, next) => {
   }
 };
 
-//  -------- update products ---------
 
 export const updateProduct = async (req, res, next) => {
   const userId = req.user.id;
@@ -581,8 +548,6 @@ export const updateProduct = async (req, res, next) => {
   console.log("body: ", req.body);
 
   try {
-    // console.log(userId, categoryId, subCategoryId, name, description, product_img_path, prices);
-    // console.log(prices)
     if (!name || !description || !prices) {
       return res.status(400).json({
         success: false,
@@ -600,7 +565,6 @@ export const updateProduct = async (req, res, next) => {
     );
 
 
-    // updating products image
     if (product_img_path) {
       const [product] = await db.execute(
         `SELECT image FROM products WHERE id = ?`,
@@ -608,16 +572,13 @@ export const updateProduct = async (req, res, next) => {
       );
 
       console.log(product);
-      // extracting publicId of stored image
       const publicID = await extractPublicID(product[0].image || "");
 
-      // deleting old image stored in database
       const result = await cloudinary.api.delete_resources([publicID || ""], {
         type: "upload",
         resource_type: "image",
       });
 
-      // updating new image
       const [product_img_url = ""] = (await uploader(product_img_path)) ?? [];
       
       console.log("product_img_url: ", product_img_url);
@@ -630,7 +591,6 @@ export const updateProduct = async (req, res, next) => {
       }
     }
 
-    // Delete prices associated with the products
     await db.execute(`DELETE FROM prices WHERE product_id = ?`, [productId]);
 
     let total_price = 0,
@@ -638,7 +598,6 @@ export const updateProduct = async (req, res, next) => {
     let price_arr_length = prices.length;
 
     for (let price of prices) {
-      // console.log(price.size, price.price);
       total_price += price.price;
       await db.execute(
         `INSERT INTO prices(product_id, size, price) VALUES (?, ?, ?)`,
@@ -652,7 +611,6 @@ export const updateProduct = async (req, res, next) => {
       productId,
     ]);
 
-    // calculating avg price of all products of users for cost per plat
     let [result] = await db.execute(
       `SELECT avg(prices.price) as avg_price
       FROM products
@@ -661,7 +619,6 @@ export const updateProduct = async (req, res, next) => {
       [userId]
     );
 
-    // console.log(total_price, price_arr_length, avg_price);
 
     let costPerPlat = parseFloat(result[0].avg_price).toFixed(2);
     await db.execute(
@@ -684,21 +641,17 @@ export const updateProduct = async (req, res, next) => {
   }
 };
 
-//  -------- delete products ---------
 
 export const deleteProduct = async (req, res, next) => {
   const subCategoryId = req.params.subCategoryId;
   const categoryId = req.params.categoryId;
   const productId = req.params.productId;
-  // console.log(subCategoryId, userId);
 
   try {
     // await db.beginTransaction();
 
-    // Delete prices associated with the products
     await db.execute(`DELETE FROM prices WHERE product_id = ?`, [productId]);
 
-    // Delete products associated with the sub-category
     await db.execute(
       `DELETE FROM products WHERE sub_category_id = ? AND id = ?`,
       [subCategoryId, productId]

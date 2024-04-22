@@ -6,12 +6,11 @@ import db from "../db/database.js";
 import uploader from "../uploads/uploader.js";
 import extractPublicID from "../uploads/extract_Public_ID.js";
 
-// --------- get profile details -----------
+
 
 export const getProfileData = async (req, res, next) => {
   const { id, email, role } = req.user;
 
-  // console.log(id, email, role);
 
   try {
     let userProfileData;
@@ -80,24 +79,19 @@ export const getProfileData = async (req, res, next) => {
   }
 };
 
-// --------- edit profile details -----------
+
 
 export const editProfileData = async (req, res, next) => {
   const userId = req.user.id;
   const userEmail = req.user.email;
   const role = req.user.role;
   const { name, email, country_code, phone_no, address } = req.body;
-  // const image_path =
-  //   (req.files &&
-  //     req.files.image &&
-  //     req.files.image[0] &&
-  //     req.files.image[0].path) ||
-  //   null;
+
   let image_path = null;
   if (req.files && req.files.image) {
     image_path = req.files.image[0].path;
   }
-  // console.log(req.files);
+
   console.log("files: ", req.files);
   console.log("body: ", req.body);
 
@@ -117,7 +111,6 @@ export const editProfileData = async (req, res, next) => {
       }
     }
 
-    // common query for both
     let sql = `
         UPDATE users
         SET 
@@ -132,7 +125,6 @@ export const editProfileData = async (req, res, next) => {
     let values = [name, email, country_code, phone_no, userId];
 
     if (role == 2) {
-      // updating user data (customer) and address
       await db.execute(sql, values);
 
       await db.execute(
@@ -152,7 +144,6 @@ export const editProfileData = async (req, res, next) => {
         );
         const publicID = await extractPublicID(data[0].image || "");
 
-        // console.log(publicID);
 
         const result = await cloudinary.api
           .delete_resources([publicID || ""], {
@@ -163,7 +154,6 @@ export const editProfileData = async (req, res, next) => {
             console.log(err);
           });
 
-        // console.log("result= ", result);
 
         imageResult = await uploader(image_path);
         const [image_url = ""] = imageResult ?? [];
@@ -178,7 +168,6 @@ export const editProfileData = async (req, res, next) => {
         }
       }
 
-      // console.log(name, email, country_code, phone_no, address);
     }
 
     if (role == 1) {
@@ -193,18 +182,6 @@ export const editProfileData = async (req, res, next) => {
         driverLicenseNumber,
       } = req.body;
 
-      // const business_license_image_path =
-      //   (req.files &&
-      //     req.files.businessLicenseImage &&
-      //     req.files.businessLicenseImage[0] &&
-      //     req.files.businessLicenseImage[0].path) ||
-      //   null;
-      // const driver_license_image_path =
-      //   (req.files &&
-      //     req.files.driverLicenseImage &&
-      //     req.files.driverLicenseImage[0] &&
-      //     req.files.driverLicenseImage[0].path) ||
-      //   null;
 
       let business_license_image_path = null;
       if (req.files && req.files.businessLicenseImage) {
@@ -216,10 +193,8 @@ export const editProfileData = async (req, res, next) => {
         driver_license_image_path = req.files.driverLicenseImage[0].path;
       }
 
-      // updating user data (caterer)
       await db.execute(sql, values);
 
-      // updating additional data of user(caterer)
       sql = `
           UPDATE userDetails
           SET
@@ -248,7 +223,6 @@ export const editProfileData = async (req, res, next) => {
 
       await db.execute(sql, values);
 
-      // finding images to update
       const [data, field] = await db.execute(
         `SELECT image, business_license_image, driver_license_image 
         FROM users
@@ -262,7 +236,6 @@ export const editProfileData = async (req, res, next) => {
       if (image_path != null) {
         const publicID = await extractPublicID(data[0].image || "");
 
-        // image deleting from cloudinary
         const result = await cloudinary.api
           .delete_resources([publicID || ""], {
             type: "upload",
@@ -290,7 +263,6 @@ export const editProfileData = async (req, res, next) => {
           data[0].business_license_image || ""
         );
 
-        // image deleting from cloudinary
         const result = await cloudinary.api
           .delete_resources([bl_publicId || ""], {
             type: "upload",
@@ -320,7 +292,6 @@ export const editProfileData = async (req, res, next) => {
           data[0].driver_license_image || ""
         );
 
-        // image deleting from cloudinary
         const result = await cloudinary.api
           .delete_resources([dl_publicId || ""], {
             type: "upload",
@@ -359,7 +330,6 @@ export const editProfileData = async (req, res, next) => {
   }
 };
 
-// --------- get all user's address -----------
 
 export const getAllAddress = async (req, res, next) => {
   const userId = req.user.id;
@@ -368,8 +338,8 @@ export const getAllAddress = async (req, res, next) => {
 
   try {
     const [data, field] = await db.execute(
-      `SELECT * FROM addresses WHERE user_id = ?`,
-      [userId]
+      `SELECT * FROM addresses WHERE user_id = ? AND is_deleted = ?`,
+      [userId, true]
     );
 
     console.log(data);
@@ -396,7 +366,6 @@ export const getAllAddress = async (req, res, next) => {
   }
 };
 
-// --------- set user's address -----------
 
 export const setAddress = async (req, res, next) => {
   const userId = req.user.id;
@@ -407,7 +376,6 @@ export const setAddress = async (req, res, next) => {
   console.log("body:", req.body);
 
   try {
-    // here's a validation code +++++++++
 
     if (!label || !address) {
       return res.status(400).json({
@@ -436,13 +404,11 @@ export const setAddress = async (req, res, next) => {
   }
 };
 
-// --------- edit user's address -----------
 
 export const editAddress = async (req, res, next) => {
   const userId = req.user.id;
   const addressId = req.params.addressId;
   const { label, address } = req.body;
-  // city, state, postal_code, country will be add later
   console.log("body:", req.body);
 
 
@@ -470,15 +436,18 @@ export const editAddress = async (req, res, next) => {
   }
 };
 
-// --------- delete user's address -----------
 
 export const deleteAddress = async (req, res, next) => {
-  const { id, email, role } = req.user;
+  const userId = req.user.id;
   const addressId = req.params.addressId;
 
-  // console.log(address_id, userId)
   try {
-    await db.execute(`DELETE FROM addresses WHERE id = ?`, [addressId]);
+    await db.execute(`
+      UPDATE addresses
+      SET
+        is_deleted = ?
+      WHERE
+        id = ? AND user_id = ?`, [false, addressId, userId]);
 
     res.status(200).json({
       success: true,
@@ -493,7 +462,7 @@ export const deleteAddress = async (req, res, next) => {
   }
 };
 
-// --------------------- Favorite caterer -----------------------
+
 
 export const getFavoriteCaterers = async (req, res, next) => {
   const userId = req.user.id;
@@ -543,14 +512,11 @@ export const getFavoriteCaterers = async (req, res, next) => {
   }
 };
 
-// ---------- add Favorite caterer -----------
 
 export const addFavoriteCaterer = async (req, res, next) => {
-  // const { id, email, role } = req.user;
   const userId = req.user.id;
   const catererId = req.body.catererId;
 
-  // console.log(req.user, catererId)
   console.log("body:", req.body);
 
 
@@ -594,14 +560,12 @@ export const addFavoriteCaterer = async (req, res, next) => {
   }
 };
 
-// ---------- remove Favorite caterer -----------
 
 export const removeFavoriteCaterer = async (req, res, next) => {
   const userId = req.user.id;
   const favoriteId = req.params.favoriteId;
 
   try {
-    // Remove the caterer from the favorites list
     const [result] = await db.execute(
       "DELETE FROM favorites WHERE id = ? AND user_id = ?",
       [favoriteId, userId]
@@ -626,5 +590,4 @@ export const removeFavoriteCaterer = async (req, res, next) => {
     });
   }
 };
-
 

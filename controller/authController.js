@@ -10,7 +10,6 @@ const { ValidationError } = joiPkg;
 import dotenv from "dotenv";
 
 import db from "../db/database.js";
-// import upload from "../uploads/multer.js";
 import uploader from "../uploads/uploader.js";
 import {
   resendOTPValidation,
@@ -35,15 +34,11 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// ------------------------- All APIs -------------------------------
-
-// --------- send OTP API ----------
 
 export const send_OTP = async (req, res, next) => {
   try {
     await sendOtpValidation.validateAsync(req.body);
 
-    // ------- OTP send Code -------
     const response = await sendOTP(
       req.body.country_code + req.body.phone_no.toString(),
       "",
@@ -55,8 +50,19 @@ export const send_OTP = async (req, res, next) => {
       process.env.OTPLESS_API_KEY,
       process.env.OTPLESS_API_SECRET
     );
-    // const response = await sendOTP(phoneNumber, email, channel, hash, orderId, expiry, otpLength, clientId, clientSecret)
 
+    // const [user] = await db.execute(
+    //   `SELECT * FROM users WHERE phone = ?`, [req.body.phone_no]
+    // )
+    // console.log(user, req.body.phone_no);
+
+    // if(user[0]){
+    //   return res.status(409).json({
+    //     success: false,
+    //     error: "User already exists",
+    //     message: "The provided email or username is already registered.",
+    //   });  
+    // }
     // console.log(response);
 
     res.status(200).json({
@@ -78,13 +84,11 @@ export const send_OTP = async (req, res, next) => {
   }
 };
 
-// --------- resend OTP API ----------
 
 export const resend_OTP = async (req, res, next) => {
   try {
     await resendOTPValidation.validateAsync(req.body);
 
-    // ------ OTP resend code ------
     const response = await resendOTP(
       req.body.orderId,
       process.env.OTPLESS_API_KEY,
@@ -117,11 +121,10 @@ export const resend_OTP = async (req, res, next) => {
   }
 };
 
-// --------- verify OTP ----------
 
 export const verify_OTP = async (req, res, next) => {
   try {
-    // await verifyOTPValidation.validateAsync(req.body);
+    await verifyOTPValidation.validateAsync(req.body);
 
     const { otp, orderId, country_code, phone_no } = req.body;
 
@@ -138,25 +141,23 @@ export const verify_OTP = async (req, res, next) => {
 
     if (otp === 9164) {
     // if (response.isOTPVerified) {
-    // response.isOTPVerified
       res.status(200).json({
         success: true,
         isVerify: true,
         message: "OTP Verified successfully",
       });
     } else {
-      // If OTP verification fails, return an error response
       res.status(400).json({
         success: false,
         message: "Invalid OTP.",
       });
     }
   } catch (error) {
-    // if (error instanceof ValidationError) {
-    //   return res.status(400).json({
-    //     message: error.message,
-    //   });
-    // }
+    if (error instanceof ValidationError) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
 
     res.status(500).json({
       success: false,
@@ -166,24 +167,16 @@ export const verify_OTP = async (req, res, next) => {
   }
 };
 
-// --------- register API ----------
 
 export const register = async (req, res, next) => {
   const { name, email, password, country_code, phone_no } = req.body;
   const role = parseInt(req.body.role);
-  // const image_path =
-  //   (req.files &&
-  //     req.files.image &&
-  //     req.files.image[0] &&
-  //     req.files.image[0].path) ||
-  //   null;
 
   let image_path = null;
   if (req.files && req.files.image) {
     image_path = req.files.image[0].path;
   }
 
-  // console.log("file: ", req.file);
   console.log("files: ", req.files);
   console.log("body: ", req.body);
 
@@ -203,13 +196,11 @@ export const register = async (req, res, next) => {
         message: "user is already register with this email.",
       });
     }
-    // console.log(user);
 
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
     if (role == 2) {
-      // 2 = customer
 
       if (!name || !email || !password || !country_code || !phone_no) {
         return res.status(400).json({
@@ -224,7 +215,6 @@ export const register = async (req, res, next) => {
       );
       userId = userInsertResult.insertId;
 
-      // ------ Image uploading ------
       if (userId && image_path) {
         let imageResult = await uploader(image_path);
         const [image_url = ""] = imageResult ?? [];
@@ -259,18 +249,6 @@ export const register = async (req, res, next) => {
         driverLicenseNumber,
       } = req.body;
 
-      // const business_license_image_path =
-      //   (req.files &&
-      //     req.files.businessLicenseImage &&
-      //     req.files.businessLicenseImage[0] &&
-      //     req.files.businessLicenseImage[0].path) ||
-      //   null;
-      // const driver_license_image_path =
-      //   (req.files &&
-      //     req.files.driverLicenseImage &&
-      //     req.files.driverLicenseImage[0] &&
-      //     req.files.driverLicenseImage[0].path) ||
-      //   null;
 
       let business_license_image_path = null;
       if (req.files && req.files.businessLicenseImage) {
@@ -305,14 +283,12 @@ export const register = async (req, res, next) => {
         });
       }
 
-      // getting user id of user
       const [userInsertResult] = await db.execute(
         "INSERT INTO users(name, email, password, country_code, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
         [name, email, hash, country_code, phone_no, role]
       );
       userId = userInsertResult.insertId;
 
-      // storing user details
       const sql =
         "INSERT INTO userDetails(user_id, business_license_number, address, bio, order_type, distance_and_fee, food_category, driver_name, driver_license_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -331,16 +307,13 @@ export const register = async (req, res, next) => {
       const [user_detail_id] = await db.execute(sql, values);
       let userDetailsId = user_detail_id.insertId;
 
-      // console.log("userDetailsId", userDetailsId);
 
       if (userId && business_license_image_path && driver_license_image_path) {
-        // image storing into cloudinary
         let imageResult = await uploader(
           image_path,
           business_license_image_path,
           driver_license_image_path
         );
-        // console.log("imageResult", imageResult);
 
         const [img_url = "", bl_img_url = "", dl_img_url = ""] =
           imageResult ?? [];
@@ -362,11 +335,11 @@ export const register = async (req, res, next) => {
       message: "User registered successfully",
     });
   } catch (error) {
-    // if (error instanceof ValidationError) {
-    //   return res.status(400).json({
-    //     message: error.message,
-    //   });
-    // }
+    if (error instanceof ValidationError) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
 
     console.log(error.message);
     res.status(500).json({
@@ -377,7 +350,6 @@ export const register = async (req, res, next) => {
   }
 };
 
-// ----------- login API -------------
 
 export const login = async (req, res, next) => {
   const userEmail = req.body.email;
@@ -400,7 +372,6 @@ export const login = async (req, res, next) => {
       });
     }
 
-    // if user is exist then check the password or compare the password
     const checkCorrectPassword = await bcrypt.compare(
       userPassword,
       user[0].password
@@ -413,30 +384,7 @@ export const login = async (req, res, next) => {
       });
     }
 
-    // const { id, email, password, role, ...rest } = user[0];
     const userData = user[0];
-
-    // ------------------------------------------------- old code -----------------------------
-    
-    // const token = jwt.sign(
-    //   { id: id, email: email, role: role },
-    //   process.env.JWT_SECRET_KEY,
-    //   { expiresIn: "1d" }
-    // );
-
-    // console.log("JWS token: ", token);
-
-    // // Set the token in the HTTP response header
-    // res.setHeader("Authorization", `Bearer ${token}`);
-
-    // res.status(200).json({
-    //   success: true,
-    //   message: "Login successful",
-    //   token,
-    //   data: { id, email, role, ...rest },
-    // });
-
-    // ------------------------------------------------- new code -----------------------------
 
     const accessToken = await signAccessToken(userData);
     const refreshToken = await signRefreshToken(userData);
@@ -444,8 +392,6 @@ export const login = async (req, res, next) => {
     console.log("JWS access token: ", accessToken);
     console.log("JWS refresh token: ", refreshToken);
 
-    // Set the token in the HTTP response header
-    // res.setHeader("Authorization", `Bearer ${access_token}`);
     res.setHeader("x-access-token", accessToken);
     res.setHeader("x-refresh-token", refreshToken);
 
@@ -472,7 +418,6 @@ export const login = async (req, res, next) => {
   }
 };
 
-// ---------------- refresh token ------------------
 export const getNewAccessToken = async (req, res, next)=>{
   
   try {
@@ -495,7 +440,6 @@ export const getNewAccessToken = async (req, res, next)=>{
     console.log("JWS access token: ", newAccessToken);
     console.log("JWS refresh token: ", newRefreshToken);
 
-    // Set the token in the HTTP response header
     res.setHeader("x-access-token", newAccessToken);
     res.setHeader("x-refresh-token", newRefreshToken);
 
@@ -516,19 +460,15 @@ export const getNewAccessToken = async (req, res, next)=>{
 }
 
 
-// ---------------- logout API ------------------
 
 export const logout = async (req, res) => {
   try {
-    // However, you may consider adding any other necessary cleanup operations here.
 
-    // Send a success response to indicate the user has been logged out.
     res.status(200).json({
       success: true,
       message: "Logout successful",
     });
   } catch (error) {
-    // Handle any errors that may occur
     res.status(500).json({
       success: false,
       error: error.message,
@@ -537,7 +477,6 @@ export const logout = async (req, res) => {
   }
 };
 
-// ------------ change password API ------------
 
 export const changePassword = async (req, res, next) => {
   const user = req.user;
@@ -598,11 +537,9 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
-// ----------- forgot password API -------------
 
 export const forgotPassword = async (req, res, next) => {
   const email = req.body.email;
-  // const role = req.body.role;
 
   try {
     // await userForgetPasswordValidation.validateAsync(req.body);
@@ -627,8 +564,6 @@ export const forgotPassword = async (req, res, next) => {
 
     // const link = `http://localhost:4000/api/v1/auth/reset-password/${row[0].id}/${token}`;
     const link = `https://cerv-project.onrender.com/api/v1/auth/reset-password/${row[0].id}/${token}`;
-
-    // console.log(process.env.ETHEREAL_MAIL_USERNAME);
 
     transporter
       .sendMail({
@@ -663,7 +598,6 @@ export const forgotPassword = async (req, res, next) => {
   }
 };
 
-// ---------- reset password API ------------
 
 export const resetPasswordLinkVerify = async (req, res, next) => {
   const userId = req.params.id;
@@ -691,7 +625,6 @@ export const resetPasswordLinkVerify = async (req, res, next) => {
       });
     }
 
-    // -------- verifying JWT token --------
     const isVerify = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
     if (!isVerify) {

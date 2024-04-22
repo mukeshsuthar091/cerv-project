@@ -14,22 +14,20 @@ import profileRoute from "./routes/profileRoutes.js";
 import userRoute from "./routes/userRoutes.js";
 import adminRoute from "./routes/adminRoutes.js";
 import searchRoute from "./routes/searchRoutes.js";
+import orderRoute from "./routes/orderRoutes.js";
 
 
 dotenv.config();
-// console.log(process.env);
 const app = express();
 const port = process.env.PORT || 8000;
 const corsOptions = {
-  // origin: ['http://localhost:3000', 'http://yourdomain.com'], // Specify allowed origins
-  origin: '*', // Specify allowed origins
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
-  credentials: true // Allow credentials (e.g., cookies)
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  credentials: true 
 };
 
 
-// ----------- middleware -------------
 
 app.use(cors(corsOptions));
 app.use(bodyParser.urlencoded({extended: true}));
@@ -38,12 +36,12 @@ app.use(cookieParser());
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/profile", profileRoute);
 app.use("/api/v1/user", userRoute);
+app.use("/api/v1/user/order", orderRoute);
 app.use("/api/v1/admin", adminRoute);
 app.use("/api/v1/search", searchRoute);
 
 
 
-// ----------- server connection -------------
 app.listen(port, () => {
   console.log("Sever listening on port ", port);
 

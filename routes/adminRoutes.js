@@ -20,7 +20,6 @@ import upload from "../middleware/multer.js";
 
 const router = express.Router();
 
-// ----------- categories ------------
 router.get("/categories", verifyToken, getAllCategories);
 
 router.post("/categories", upload.single("image"), verifyToken, createCategory);
@@ -30,7 +29,6 @@ router.put("/categories/:categoryId", upload.single("image"), verifyToken, updat
 router.delete("/categories/:categoryId", verifyToken, deleteCategory);
 
 
-// ----------- sub-categories ------------
 router.get("/categories/:categoryId/sub-categories", verifyToken, getAllSubCategories);
 
 router.post("/categories/:categoryId/sub-categories", upload.single("image"), verifyToken, createSubCategory);
@@ -40,7 +38,6 @@ router.put("/sub-categories/:subCategoryId", upload.single("image"), verifyToken
 router.delete("/sub-categories/:subCategoryId", verifyToken, deleteSubCategory);
 
 
-// ----------- products ------------
 router.get("/categories/:categoryId/sub-categories/:subCategoryId/products", verifyToken, getAllProducts);
 
 router.get("/categories/:categoryId/sub-categories/:subCategoryId/products/:productId", verifyToken, getSingleProduct);
