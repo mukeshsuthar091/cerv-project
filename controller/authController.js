@@ -335,11 +335,11 @@ export const register = async (req, res, next) => {
       message: "User registered successfully",
     });
   } catch (error) {
-    if (error instanceof ValidationError) {
-      return res.status(400).json({
-        message: error.message,
-      });
-    }
+    // if (error instanceof ValidationError) {
+    //   return res.status(400).json({
+    //     message: error.message,
+    //   });
+    // }
 
     console.log(error.message);
     res.status(500).json({
@@ -358,7 +358,7 @@ export const login = async (req, res, next) => {
   console.log("login data: ", req.body);
 
   try {
-    await userLoginValidation.validateAsync(req.body);
+    // await userLoginValidation.validateAsync(req.body);
 
     const [user, fields] = await db.execute(
       "SELECT * FROM users WHERE email = ?",
@@ -404,11 +404,11 @@ export const login = async (req, res, next) => {
     });
 
   } catch (error) {
-    if (error instanceof ValidationError) {
-      return res.status(400).json({
-        message: error.message,
-      });
-    }
+    // if (error instanceof ValidationError) {
+    //   return res.status(400).json({
+    //     message: error.message,
+    //   });
+    // }
 
     res.status(500).json({
       success: false,
