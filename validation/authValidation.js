@@ -18,6 +18,8 @@ export const resendOTPValidation = Joi.object({
 export const verifyOTPValidation = Joi.object({
   otp: Joi.number().min(1000).max(9999).required(),
   orderId: Joi.string().required(),
+  phone_no: Joi.string().required().length(10),
+  country_code: Joi.string().required().length(2),
 });
 
 // ------- register validation ---------
