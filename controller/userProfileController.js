@@ -19,8 +19,10 @@ export const getProfileData = async (req, res, next) => {
       let [data, field] = await db.execute(
         `SELECT 
             users.id, 
-            users.name, 
-            users.email, 
+            users.name,
+            users.image, 
+            users.email,
+            users.country_code, 
             users.phone, 
               CASE
                   WHEN addresses.address IS NOT NULL THEN addresses.address
