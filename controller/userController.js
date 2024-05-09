@@ -100,46 +100,41 @@ export const getAllSubCategory = async (req, res, next) => {
 
     try {
         const [subCategories] = await db.execute(
-            `SELECT sc.id,
+            `SELECT 
+                sc.id,
                 sc.name,
                 COUNT(p.id) AS product_count,
                 sc.created_at,
-                sc.updated_at
-            FROM sub_categories sc
+                sc.updated_at,
+                JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'id', p.id,
+                            'image', p.image,
+                            'food_name', p.food_name,
+                            'food_description', p.food_description,
+                            'size', ps.size,
+                            'price', ps.price,
+                            'created_at', p.created_at,
+                            'updated_at', p.updated_at
+                        )
+                    )
+                AS products
+            FROM 
+                sub_categories sc
             LEFT JOIN 
                 products p ON sc.id = p.sub_category_id
+            LEFT JOIN 
+                prices ps ON ps.product_id = p.id
             WHERE 
                 sc.category_id = ?
             GROUP BY 
-                sc.id, sc.name`,
+                sc.id, sc.name, sc.created_at, sc.updated_at`,
             [categoryId]
         );
 
-        let subCategoriesWithProduct = subCategories.map(async (sc) => {
-            let [product] = await db.execute(`
-            SELECT p.id, 
-                p.image,
-                p.food_name,
-                p.food_description,
-                ps.size,
-                ps.price,
-                ps.created_at,
-                ps.updated_at
-            FROM products p
-            LEFT JOIN prices ps ON ps.product_id = p.id
-            WHERE p.sub_category_id = ?`, [sc.id])
-
-            // return {
-            //   ...sc,
-            //   products: product,
-            // }
-            console.log(product);
-        });
-
-
         res.status(200).json({
             success: true,
-            data: subCategoriesWithProduct,
+            data: subCategories,
             message: "Successfully retrieved caterer's data",
         });
     } catch (error) {
