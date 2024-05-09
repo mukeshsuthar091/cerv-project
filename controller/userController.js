@@ -9,23 +9,20 @@ export const getAllCaterer = async (req, res, next) => {
   try {
     const [caterers] = await db.execute(`
     SELECT
-      users.id,
-      users.image,
-      users.name,
-      users.email,
-      userDetails.address,
-      COALESCE(ROUND(avg(ratings.rating_value), 1), 0) AS rating,
-      userDetails.cost_per_plat
+      u.id,
+      u.image,
+      u.name,
+      u.email,
+      ud.address,
+      ud.rate_avg,
+      ud.rate_count,
+      ud.cost_per_plat
     FROM
-        users
+        users u
     LEFT JOIN
-        ratings ON users.id = ratings.user_id
-    LEFT JOIN
-        userDetails ON users.id = userDetails.user_id
+        userDetails ud ON u.id = ud.user_id
     WHERE
-        users.role = 1
-    GROUP BY
-        users.id, users.name, users.email, userDetails.address`);
+        u.role = 1`);
 
     console.log(caterers);
 
@@ -49,28 +46,22 @@ export const getSingleCaterer = async (req, res, next) => {
   try {
     const [catererDetails] = await db.execute(
       `SELECT
-          users.id,
-          users.image,
-          users.name, 
-          users.email, 
-          userDetails.address, 
-          COALESCE(ROUND(avg(ratings.rating_value), 1), 0) AS rating,
-          userDetails.bio, 
-          userDetails.food_category, 
-          userDetails.order_type
-      FROM
-          users
-      LEFT JOIN
-          ratings ON users.id = ratings.user_id
-      LEFT JOIN
-          userDetails ON users.id = userDetails.user_id
-      WHERE 
-          users.role = 1 AND users.id = ?
-      GROUP BY 
-          users.id`,
+      u.id,
+      u.image,
+      u.name,
+      u.email,
+      ud.address,
+      ud.rate_avg,
+      ud.rate_count,
+      ud.cost_per_plat
+    FROM
+        users u
+    LEFT JOIN
+        userDetails ud ON u.id = ud.user_id
+    WHERE
+        u.role = 1 AND u.id = ?`,
       [catererId]
     );
-
 
     const [categories] = await db.execute(
       `SELECT 
@@ -175,6 +166,134 @@ export const getAllProducts = async (req, res, next) => {
       success: false,
       error: error.message,
       message: "Failed to retrieve products.",
+    });
+  }
+};
+
+export const checkout = async (req, res, next) => {
+  const userId = req.user.id;
+  const payload = req.body;
+
+  try {
+    // console.log(payload);
+
+    if (
+      !payload.catererId ||
+      !payload.addressId ||
+      !payload.status ||
+      !payload.order_type ||
+      !payload.payment_method ||
+      !payload.service_charge ||
+      !payload.delivery_fee ||
+      !payload.subtotal ||
+      !payload.tax_charge ||
+      !payload.total_amount ||
+      !payload.delivery_datetime ||
+      payload.order_items.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please ensure that required fields are supplied correctly!",
+      });
+    }
+    // console.log("Error: ", payload);
+
+    if (
+      payload.payment_method !== "COD" &&
+      payload.payment_method !== "ONLINE"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please ensure that payment_methods are supplied correctly!",
+      });
+    }
+
+    if (
+      (payload.promo_discount && !payload.couponId) ||
+      (!payload.promo_discount && payload.couponId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please ensure that required fields are supplied correctly!",
+      });
+    }
+
+    if (!payload.promo_discount && !payload.couponId) {
+      payload.promo_discount = "";
+      payload.couponId = "";
+    }
+
+    let hasData = true;
+    payload.order_items.map((item) => {
+      if (!item.quantity || !item.productId) {
+        return (hasData = false);
+      }
+    });
+
+    if (hasData === false) {
+      return res.status(400).json({
+        success: false,
+        message: "Please ensure that required fields are supplied correctly!",
+      });
+    }
+
+    const {
+      catererId,
+      couponId,
+      addressId,
+      status,
+      order_type,
+      payment_method,
+      service_charge,
+      delivery_fee,
+      promo_discount,
+      subtotal,
+      tax_charge,
+      total_amount,
+      delivery_datetime,
+    } = payload;
+
+    const sql =
+      "INSERT INTO orders(user_id, caterer_id, coupon_id, address_id, status, order_type, payment_method, service_charge, delivery_fee, promo_discount, subtotal, tax_charge, total_amount, delivery_datetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    const values = [
+      userId,
+      catererId,
+      couponId,
+      addressId,
+      status,
+      order_type,
+      payment_method,
+      service_charge,
+      delivery_fee,
+      promo_discount,
+      subtotal,
+      tax_charge,
+      total_amount,
+      delivery_datetime,
+    ];
+
+    const order = await db.execute(sql, values);
+
+    for (let item of payload.order_items) {
+      const sql =
+        "INSERT INTO order_items(quantity, order_id, product_id) VALUES (?, ?, ?)";
+      const values = [item.quantity, order[0].insertId, item.productId];
+
+      await db.execute(sql, values);
+    }
+
+    
+
+    res.status(200).json({
+      success: true,
+      message: "Order created successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Something went wrong!",
     });
   }
 };

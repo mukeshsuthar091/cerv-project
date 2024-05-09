@@ -15,14 +15,13 @@ export const getAllCategories = async (req, res, next) => {
   try {
     const [categories] = await db.execute(
       `SELECT 
-          categories.id, 
-          categories.name,
-          categories.image
+          *
       FROM categories
       WHERE categories.user_id = ?`,
       [userId]
     );
 
+    console.log(userId)
     res.status(200).json({
       success: true,
       data: categories,
@@ -185,13 +184,10 @@ export const getAllSubCategories = async (req, res, next) => {
   try {
     const [subCategories] = await db.execute(
       `SELECT 
-          sub_categories.id, 
-          sub_categories.category_id,
-          sub_categories.name,
-          sub_categories.image
+          *
       FROM sub_categories
-      WHERE sub_categories.user_id = ? AND sub_categories.category_id = ?`,
-      [userId, categoryId]
+      WHERE sub_categories.category_id = ?`,
+      [categoryId]
     );
 
     res.status(200).json({
@@ -490,11 +486,7 @@ export const getSingleProduct = async (req, res, next) => {
   try {
     const [product] = await db.execute(
       `SELECT 
-          products.id,
-          products.food_name,
-          products.food_description,
-          products.avg_price,
-          products.image
+          *
       FROM products
       WHERE sub_category_id = ? AND id = ?`,
       [subCategoryId, productId]
@@ -503,9 +495,7 @@ export const getSingleProduct = async (req, res, next) => {
     // console.log(product);
     const [prices] = await db.execute(
       `SELECT
-          prices.id,
-          prices.size,
-          prices.price
+          *
       FROM prices
       WHERE prices.product_id = ?`,
       [productId]

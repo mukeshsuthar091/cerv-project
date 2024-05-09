@@ -36,7 +36,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/profile", profileRoute);
 app.use("/api/v1/user", userRoute);
-app.use("/api/v1/user/order", orderRoute);
+app.use("/api/v1/order", orderRoute);
 app.use("/api/v1/admin", adminRoute);
 app.use("/api/v1/search", searchRoute);
 
