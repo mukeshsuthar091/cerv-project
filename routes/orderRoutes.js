@@ -11,4 +11,6 @@ router.post("/cancel-order", verifyToken, cancelOrder);
 
 router.post("/review", verifyToken, postReview);
 
+router.post("/accept-order", verifyToken, )
+
 export default router;

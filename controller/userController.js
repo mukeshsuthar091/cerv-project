@@ -153,8 +153,8 @@ export const getAllProducts = async (req, res, next) => {
     try {
         const [products] = await db.execute(
             `SELECT id, image, food_name, food_description
-      FROM products
-      WHERE sub_category_id = ?`,
+            FROM products
+            WHERE sub_category_id = ?`,
             [subCategoryId]
         );
 
@@ -163,8 +163,8 @@ export const getAllProducts = async (req, res, next) => {
         for (let product of products) {
             const [prices] = await db.execute(
                 `SELECT id, size, price
-        FROM prices
-        WHERE product_id = ?;`,
+                FROM prices
+                WHERE product_id = ?;`,
                 [product.id]
             );
 
@@ -298,8 +298,8 @@ export const checkout = async (req, res, next) => {
 
         for (let item of payload.order_items) {
             const sql =
-                "INSERT INTO order_items(quantity, order_id, product_id) VALUES (?, ?, ?)";
-            const values = [item.quantity, order[0].insertId, item.productId];
+                "INSERT INTO order_items(size, price, quantity, order_id, product_id) VALUES (?, ?, ?, ?, ?)";
+            const values = [item.size, item.price, item.quantity, order[0].insertId, item.productId];
 
             await db.execute(sql, values);
         }
