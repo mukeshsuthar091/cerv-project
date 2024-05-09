@@ -23,52 +23,101 @@ export const getOrders = async (req, res, next) => {
             });
         }
 
-        let orders, orderItems, data;
+        let orders, orderItems, data, catererInfo, products;
 
         if (status === "current") {
-            let sql = `SELECT *
-                FROM orders
-                WHERE orders.user_id = ?
-                AND orders.status IN ('PENDING', 'ACCEPTED', 'PACKED', 'SHIPPED')`;
-            let values = [userId];
 
-            [orders] = await db.execute(sql, values);
+            [orders] = await db.execute(`
+            SELECT *
+            FROM orders
+            WHERE orders.user_id = ?
+            AND orders.status IN ('PENDING', 'ACCEPTED', 'PACKED', 'SHIPPED')`, [userId]);
 
-            sql = `SELECT * FROM order_items
-                WHERE order_items.order_id = ?
-                AND order_items.status IN ('PENDING', 'ACCEPTED', 'PACKED', 'SHIPPED')`;
-            values = [orders[0].id];
 
-            [orderItems] = await db.execute(sql, values);
+            [catererInfo] = await db.execute(`
+            SELECT 
+                u.id,
+                u.name,
+                u.image,
+                ud.address
+            FROM users u
+            LEFT JOIN userDetails ud on ud.user_id = u.id
+            WHERE u.id = ?
+            `, [orders[0].caterer_id]);
+
+
+            [orderItems] = await db.execute(`
+            SELECT 
+                ot.id,
+                ot.quantity,
+                ot.order_id,
+                p.id,
+                p.food_name,
+                p.food_description,
+                ps.size,
+                ps.price,
+                p.image,
+                ot.created_at,
+                ot.updated_at
+            FROM order_items ot
+            LEFT JOIN products p ON p.id = ot.product_id
+            LEFT JOIN prices ps ON ps.product_id = p.id
+            WHERE ot.order_id = ?`, [orders[0].id]);
+
 
             data = {
                 ...orders[0],
+                catererInfo: catererInfo[0],
                 orderItems: orderItems,
             };
 
             console.log("order_items", data);
+
         } else if (status === "past") {
-            let sql = `SELECT *
-                FROM orders
-                WHERE orders.user_id = ?
-                AND orders.status IN ('REJECTED', 'CANCELLED', 'DELIVERED')`;
-            let values = [userId];
 
-            [orders] = await db.execute(sql, values);
+            [orders] = await db.execute(`
+            SELECT *
+            FROM orders
+            WHERE orders.user_id = ?
+            AND orders.status IN ('REJECTED', 'CANCELLED', 'DELIVERED')`, [userId]);
 
-            sql = `SELECT * FROM order_items
-                WHERE order_items.order_id = ?
-                AND order_items.status IN ('REJECTED', 'CANCELLED', 'DELIVERED')`;
-            values = [orders[0].id];
+            [catererInfo] = await db.execute(`
+            SELECT 
+                u.id,
+                u.name,
+                u.image,
+                ud.address
+            FROM users u
+            LEFT JOIN userDetails ud on ud.user_id = u.id
+            WHERE u.id = ?
+            `, [orders[0].caterer_id]);
 
-            [orderItems] = await db.execute(sql, values);
+
+            [orderItems] = await db.execute( `
+            SELECT 
+                ot.id,
+                ot.quantity,
+                ot.order_id,
+                p.id,
+                p.food_name,
+                p.food_description,
+                ps.size,
+                ps.price,
+                p.image,
+                ot.created_at,
+                ot.updated_at
+            FROM order_items ot
+            LEFT JOIN products p ON p.id = ot.product_id
+            LEFT JOIN prices ps ON ps.product_id = p.id
+            WHERE ot.order_id = ?`, [orders[0].id]);
 
             data = {
                 ...orders[0],
+                catererInfo: catererInfo[0],
                 orderItems: orderItems,
             };
 
-            console.log("order_items", data);
+            console.log("order_items", data, orders[0].caterer_id);
         }
 
         res.status(201).json({
@@ -156,6 +205,10 @@ export const cancelOrder = async (req, res, next) => {
 
         await db.execute(`UPDATE orders SET status = ? WHERE id = ?`, ['CANCELLED', orderId]);
 
+        await db.execute(`UPDATE orders SET status = ? WHERE id = ?`, ['CANCELLED', orderId]);
+
+
+        
         res.status(201).json({
             success: true,
             message: "Get order succeed.",
@@ -174,11 +227,11 @@ export const cancelOrder = async (req, res, next) => {
 
 export const postReview = async (req, res, next)=>{
     const userId = req.user.id;
-    const { catererId, rate, message } = req.body;
+    const { orderId, rate, message } = req.body;
 
     try {
 
-        if (!catererId || !rate || !message){
+        if (!orderId || !rate || !message){
             return res.status(400).json({
                 success: false,
                 message:
@@ -186,8 +239,13 @@ export const postReview = async (req, res, next)=>{
             });
         }
 
+        const [order] = await db.execute(`
+            SELECT *
+            FROM orders
+            WHERE orders.id = ?`, [orderId])
+
         
-        const [catererDetail] = await db.execute(`SELECT * FROM userDetails WHERE user_id = ?`, [catererId]); 
+        const [catererDetail] = await db.execute(`SELECT * FROM userDetails WHERE user_id = ?`, [order[0].caterer_id]); 
 
         if(!catererDetail){
             return res.status(404).json({
@@ -202,8 +260,8 @@ export const postReview = async (req, res, next)=>{
         const avg_rate = (rate + (rate_avg * rate_count)) / (rate_count + 1);
 
         await db.execute(
-                `INSERT INTO reviews (user_id, caterer_id, rate, message) VALUES (?, ?, ?, ?)`,
-                [userId, catererId, rate, message]
+                `UPDATE orders SET rate = ?, rate_description = ? WHERE orders.id = ?`,
+                [rate, message, orderId]
             );
             
         rate_avg = avg_rate.toFixed(2);
@@ -211,7 +269,7 @@ export const postReview = async (req, res, next)=>{
 
         await db.execute(
                 `UPDATE userDetails SET rate_avg = ?, rate_count = ? WHERE user_id = ?`,
-                [rate_avg, rate_count, catererId]
+                [rate_avg, rate_count, order[0].caterer_id]
             );
             
 
