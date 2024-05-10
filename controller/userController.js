@@ -282,8 +282,8 @@ export const checkout = async (req, res, next) => {
         }
 
         if (!payload.promo_discount && !payload.couponId) {
-            payload.promo_discount = "";
-            payload.couponId = "";
+            payload.promo_discount = 0;
+            payload.couponId = null;
         }
 
         let hasData = true;
