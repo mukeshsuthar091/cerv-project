@@ -99,6 +99,39 @@ export const getAllSubCategory = async (req, res, next) => {
     // console.log(categoryId)
 
     try {
+        // const [subCategories] = await db.execute(
+        //     `SELECT 
+        //         sc.id,
+        //         sc.name,
+        //         COUNT(p.id) AS product_count,
+        //         sc.created_at,
+        //         sc.updated_at,
+        //         JSON_ARRAYAGG(
+        //                 JSON_OBJECT(
+        //                     'id', p.id,
+        //                     'image', p.image,
+        //                     'food_name', p.food_name,
+        //                     'food_description', p.food_description,
+        //                     'size', ps.size,
+        //                     'price', ps.price,
+        //                     'created_at', p.created_at,
+        //                     'updated_at', p.updated_at
+        //                 )
+        //             )
+        //         AS products
+        //     FROM 
+        //         sub_categories sc
+        //     LEFT JOIN 
+        //         products p ON sc.id = p.sub_category_id
+        //     LEFT JOIN 
+        //         prices ps ON ps.product_id = p.id
+        //     WHERE 
+        //         sc.category_id = ?
+        //     GROUP BY 
+        //         sc.id, sc.name, sc.created_at, sc.updated_at`,
+        //     [categoryId]
+        // );
+
         const [subCategories] = await db.execute(
             `SELECT 
                 sc.id,
@@ -112,8 +145,20 @@ export const getAllSubCategory = async (req, res, next) => {
                             'image', p.image,
                             'food_name', p.food_name,
                             'food_description', p.food_description,
-                            'size', ps.size,
-                            'price', ps.price,
+                            'prices', (
+                                SELECT 
+                                    JSON_ARRAYAGG(
+                                        JSON_OBJECT(
+                                            'id', ps.id,
+                                            'size', ps.size,
+                                            'price', ps.price
+                                        )
+                                    )
+                                FROM 
+                                    prices ps
+                                WHERE 
+                                    ps.product_id = p.id
+                            ),
                             'created_at', p.created_at,
                             'updated_at', p.updated_at
                         )
@@ -123,8 +168,6 @@ export const getAllSubCategory = async (req, res, next) => {
                 sub_categories sc
             LEFT JOIN 
                 products p ON sc.id = p.sub_category_id
-            LEFT JOIN 
-                prices ps ON ps.product_id = p.id
             WHERE 
                 sc.category_id = ?
             GROUP BY 
