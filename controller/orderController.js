@@ -300,11 +300,11 @@ export const cancelOrder = async (req, res, next) => {
             WHERE o.id = ?
             GROUP BY o.id`;
 
-        const [order] = await db.execute(sql, [orderId]);
+        let values = [orderId];
 
-        console.log("order: ", order[0].status);
+        let [order] = await db.execute(sql, values);
 
-        if (!order) {
+        if (!order[0]) {
             return res.status(404).json({
                 success: false,
                 message: "No order data found!",
@@ -323,10 +323,7 @@ export const cancelOrder = async (req, res, next) => {
             orderId,
         ]);
 
-        await db.execute(`UPDATE orders SET status = ? WHERE id = ?`, [
-            "CANCELLED",
-            orderId,
-        ]);
+        [order] = await db.execute(sql, values);
 
         res.status(201).json({
             success: true,
@@ -408,4 +405,186 @@ export const postReview = async (req, res, next) => {
 
 export const acceptOrder = async (req, res, next) => {
     const userId = req.user.id;
+    const orderId = req.body.orderId;
+
+    try {
+
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Please ensure that required fields are supplied correctly!",
+            });
+        }
+
+        let sql = `
+                SELECT 
+                    o.id,
+                    o.caterer_id,
+                    o.address_id,
+                    o.status,
+                    o.order_type,
+                    o.payment_method,
+                    o.service_charge,
+                    o.delivery_fee,
+                    o.promo_discount,
+                    o.subtotal,
+                    o.tax_charge,
+                    o.total_amount,
+                    o.delivery_datetime,
+                    o.created_at,
+                    o.updated_at,
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'id', p.id,
+                            'type', p.type,
+                            'transaction_id', p.transaction_id,
+                            'paymentIntent', p.paymentIntent,
+                            'client_secret', p.client_secret,
+                            'ephemeral_key', p.ephemeral_key,
+                            'customer_id', p.customer_id, 
+                            'amount', p.amount, 
+                            'charge', p.charge, 
+                            'status', p.status, 
+                            'createdAt', p.createdAt, 
+                            'updatedAt', p.updatedAt
+                            ) 
+                    ) AS payments
+            FROM orders o
+            LEFT JOIN payments p ON p.orderId = o.id
+            WHERE o.id = ?
+            GROUP BY o.id`;
+        
+        let values = [orderId];
+
+        let [order] = await db.execute(sql, values);
+
+        if (!order[0]) {
+            return res.status(404).json({
+                success: false,
+                message: "No order data found!",
+            });
+        }
+        
+        if (order[0].status === "ACCEPTED") {
+            return res.status(404).json({
+                success: false,
+                message: "Order is already accepted!",
+            });
+        }
+
+        await db.execute(`UPDATE orders SET status = ? WHERE id = ?`, [
+            "ACCEPTED",
+            orderId,
+        ]);
+
+        [order] = await db.execute(sql, values);
+
+        res.status(201).json({
+            success: true,
+            message: "Your order accept succeed.",
+            data: order[0],
+        });
+    } catch (error) {
+        res.status(error.status_code || 500).json({
+            success: false,
+            error: error.message,
+            message: "Some thing went wrong!",
+        });
+    }
+
+};
+
+
+
+export const rejectOrder = async (req, res, next) => {
+    const userId = req.user.id;
+    const orderId = req.body.orderId;
+
+    try {
+
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Please ensure that required fields are supplied correctly!",
+            });
+        }
+
+        let sql = `
+                SELECT 
+                    o.id,
+                    o.caterer_id,
+                    o.address_id,
+                    o.status,
+                    o.order_type,
+                    o.payment_method,
+                    o.service_charge,
+                    o.delivery_fee,
+                    o.promo_discount,
+                    o.subtotal,
+                    o.tax_charge,
+                    o.total_amount,
+                    o.delivery_datetime,
+                    o.created_at,
+                    o.updated_at,
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'id', p.id,
+                            'type', p.type,
+                            'transaction_id', p.transaction_id,
+                            'paymentIntent', p.paymentIntent,
+                            'client_secret', p.client_secret,
+                            'ephemeral_key', p.ephemeral_key,
+                            'customer_id', p.customer_id, 
+                            'amount', p.amount, 
+                            'charge', p.charge, 
+                            'status', p.status, 
+                            'createdAt', p.createdAt, 
+                            'updatedAt', p.updatedAt
+                            ) 
+                    ) AS payments
+            FROM orders o
+            LEFT JOIN payments p ON p.orderId = o.id
+            WHERE o.id = ?
+            GROUP BY o.id`;
+        
+        let values = [orderId];
+
+        let [order] = await db.execute(sql, values);
+
+        if (!order[0]) {
+            return res.status(404).json({
+                success: false,
+                message: "No order data found!",
+            });
+        }
+        
+        if (order[0].status === "REJECTED") {
+            return res.status(404).json({
+                success: false,
+                message: "Order is already rejected!",
+            });
+        }
+
+        await db.execute(`UPDATE orders SET status = ? WHERE id = ?`, [
+            "REJECTED",
+            orderId,
+        ]);
+
+        [order] = await db.execute(sql, values);
+
+        res.status(201).json({
+            success: true,
+            message: "Your order accept succeed.",
+            data: order[0],
+        });
+    } catch (error) {
+        res.status(error.status_code || 500).json({
+            success: false,
+            error: error.message,
+            message: "Some thing went wrong!",
+        });
+    }
+
 };

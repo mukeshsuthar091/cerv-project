@@ -1,7 +1,7 @@
 import express from "express";
 
 import { verifyToken } from "../middleware/verifyToken.js";
-import { postReview, cancelOrder, getOrders } from "../controller/orderController.js";
+import { postReview, cancelOrder, getOrders, acceptOrder, rejectOrder } from "../controller/orderController.js";
 
 const router = express.Router();
 
@@ -11,6 +11,8 @@ router.post("/cancel-order", verifyToken, cancelOrder);
 
 router.post("/review", verifyToken, postReview);
 
-router.post("/accept-order", verifyToken, )
+router.post("/accept-order", verifyToken, acceptOrder)
+
+router.post("/reject-order", verifyToken, rejectOrder)
 
 export default router;
